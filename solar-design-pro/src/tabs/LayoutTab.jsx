@@ -157,10 +157,6 @@ export default function LayoutTab({
                 <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
                   <button style={{ ...bt(false), fontSize: 10, padding: "4px 10px" }} onClick={() => autoFillFace(g.id)}>Auto-Fill</button>
                   <button style={{ ...bt(false), fontSize: 10, padding: "4px 10px" }} onClick={() => resetGroupLayout(g.id)}>Reset Positions</button>
-                  <button style={{ ...bt(false), fontSize: 10, padding: "4px 10px", color: rd }} onClick={() => resetGroupLayout(g.id, true)}>Clear All</button>
-                  {laySel && laySel.gi === g.id && (
-                    <button style={{ ...bt(false), fontSize: 10, padding: "4px 10px", color: rd }} onClick={removeSelMod}>Delete Selected</button>
-                  )}
                   <div style={{ flex: 1 }} />
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     <button style={{ ...bt(false), fontSize: 12, padding: "3px 8px", fontWeight: 700 }} onClick={() => setZ(g.id, z - 0.25)}>−</button>
@@ -180,14 +176,14 @@ export default function LayoutTab({
                     <div style={{
                       position: "relative", width: LAY_W, height: canH, background: "#0c1929",
                       transform: `scale(${z})`, transformOrigin: "0 0",
-                      cursor: "crosshair", userSelect: "none"
+                      cursor: "default", userSelect: "none"
                     }}
                       onMouseMove={e => {
                         if (!layDrag || layDrag.gi !== g.id) return;
                         const rect = e.currentTarget.getBoundingClientRect();
                         const rawX = (e.clientX - rect.left) / z - layDrag.ox;
                         const rawY = (e.clientY - rect.top) / z - layDrag.oy;
-                        const snapped = snapPos(rawX, rawY, layDrag.id, g.id, sz);
+                        const snapped = snapPos(g.id, layDrag.id, rawX, rawY, g.ori, g.fw);
                         updateModPos(g.id, layDrag.id, snapped.x, snapped.y);
                       }}
                       onMouseUp={() => setLayDrag(null)}
@@ -195,10 +191,7 @@ export default function LayoutTab({
                       onClick={e => {
                         if (layDrag) return;
                         if (e.target.dataset?.mod) return;
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const x = (e.clientX - rect.left) / z - sz.w / 2;
-                        const y = (e.clientY - rect.top) / z - sz.h / 2;
-                        addModToFace(g.id, x, y);
+                        setLaySel(null);
                       }}
                     >
                       {/* SVG Grid Overlay */}

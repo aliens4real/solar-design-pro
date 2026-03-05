@@ -150,7 +150,7 @@ export default function App() {
     let bx = rawX, by = rawY;
     const edges = { xs: [], ys: [] };
     mods.forEach((m, i) => {
-      if (i === idx) return;
+      if (m.id === idx) return;
       const ms = sz;
       edges.xs.push(m.x, m.x + ms.w, m.x - sz.w - GAP, m.x + ms.w + GAP);
       edges.ys.push(m.y, m.y + ms.h, m.y - sz.h - GAP, m.y + ms.h + GAP);
@@ -162,8 +162,8 @@ export default function App() {
     return { x: Math.max(0, bx), y: Math.max(0, by) };
   };
 
-  const updateModPos = (gid, idx, x, y) => {
-    setLayPos(prev => ({ ...prev, [gid]: (prev[gid] || []).map((m, i) => i === idx ? { ...m, x, y } : m) }));
+  const updateModPos = (gid, modId, x, y) => {
+    setLayPos(prev => ({ ...prev, [gid]: (prev[gid] || []).map(m => m.id === modId ? { ...m, x, y } : m) }));
   };
 
   const resetGroupLayout = (gid) => {
