@@ -9,7 +9,7 @@ import CarportDiagram from '../diagrams/CarportDiagram.jsx';
 import AnnotationOverlay from '../components/AnnotationOverlay.jsx';
 import { seedResidential, seedCommercial, seedGround, seedCarport } from '../calc/diagram-seeds.js';
 
-export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan }) {
+export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroups, layPos, md, ivs }) {
   const mt = pj.mt || "roof";
   const es = +(pj.es || 200);
   const isComm = es >= 320;
@@ -43,7 +43,7 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan }) {
     const seedFn = mt === "roof" ? (isComm ? seedCommercial : seedResidential)
       : mt === "ground" ? seedGround : mt === "carport" ? seedCarport : null;
     if (!seedFn) return;
-    sDan(seedFn(es, { dcPV, dcRun, acRun, seRun, gecRun }, isComm));
+    sDan(seedFn(es, { dcPV, dcRun, acRun, seRun, gecRun }, isComm, ivs));
     seedRef.current = key;
   }, [mt, isComm]);
 
@@ -62,7 +62,7 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan }) {
     return { pv: 0, dc: find("_ln_dc"), ac: find("_ln_ac"), se: find("_ln_se"), gec: find("_ln_ge") };
   }, [dAn?.ln]);
 
-  const props = { svW, svH, es, isComm, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr: anWr };
+  const props = { svW, svH, es, isComm, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr: anWr, modGroups, layPos, md };
 
   // SVG coordinate adapter
   const getSvgPt = useCallback(e => {
@@ -85,6 +85,7 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan }) {
     mk: dAn.mk || [], ln: dAn.ln || [], updAn, getSvgPt,
     containerRef: svgRef, containerSize,
     siteSpecs, SITE_RUNS, renderMode: "inline",
+    modGroups, layPos, md,
   }) : null;
 
   // Select diagram component

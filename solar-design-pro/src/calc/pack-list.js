@@ -35,7 +35,7 @@ function addConduitRun(a, szRaw, runLen, label, endpoints) {
   a('Conduit', `${sz} LB Fitting${lbl}`,             lbs,       'ea', p.lb);
 }
 
-export function mkPack(m, iv, d, sz, wr, es, pht) {
+export function mkPack(m, iv, d, sz, wr, es, pht, ivs) {
   if (!m || !iv || !d) return [];
   const n = d.tm || 0, ni = d.ni || 1, mi = iv.tp === "micro", oi = iv.tp === "optimizer";
   const L = [];
@@ -44,11 +44,23 @@ export function mkPack(m, iv, d, sz, wr, es, pht) {
   const svc = +(es || 200);
   const isComm = svc >= 320;
   const hasWr = (w.pv || 0) + (w.dc || 0) + (w.ac || 0) + (w.se || 0) + (w.gec || 0) > 0;
+  const hasMultiIv = ivs && ivs.length > 0;
 
   a("Modules", m.nm, n, "ea", m.$);
-  a("Inverters", iv.nm, mi ? n : ni, "ea", iv.$);
-  if (mi) { a("Enphase", "Q Cable raw", n * 6, "ft", 1.44); a("Enphase", "IQ Gateway/Combiner", 1, "ea", 628); }
-  if (oi) { a("Optimizer", "SolarEdge P505", n, "ea", 70); }
+
+  // Inverters — multi-inverter support
+  if (hasMultiIv) {
+    ivs.forEach(e => {
+      const isMicro = e.inv.tp === "micro";
+      a("Inverters", e.inv.nm, isMicro ? n : e.qty, "ea", e.inv.$);
+      if (isMicro) { a("Enphase", "Q Cable raw", n * 6, "ft", 1.44); a("Enphase", "IQ Gateway/Combiner", 1, "ea", 628); }
+      if (e.inv.tp === "optimizer") { a("Optimizer", "SolarEdge P505", n, "ea", 70); }
+    });
+  } else {
+    a("Inverters", iv.nm, mi ? n : ni, "ea", iv.$);
+    if (mi) { a("Enphase", "Q Cable raw", n * 6, "ft", 1.44); a("Enphase", "IQ Gateway/Combiner", 1, "ea", 628); }
+    if (oi) { a("Optimizer", "SolarEdge P505", n, "ea", 70); }
+  }
 
   const rl = Math.ceil(n / 4) * 2;
   a("Racking", "XR100 Rail 168\"", rl, "ea", 48.5);
@@ -144,8 +156,9 @@ export function mkPack(m, iv, d, sz, wr, es, pht) {
     });
   }
 
-  a("OCPD", "Breaker " + (sz?.oc || d.aoc || 40) + "A 2p", 1, "ea", 24.65);
-  if (!mi) a("Disconnect", "DC Disconnect 600V", 1, "ea", 51);
+  const totalInvUnits = hasMultiIv ? ivs.reduce((s, e) => s + e.qty, 0) : ni;
+  a("OCPD", "Breaker " + (sz?.oc || d.aoc || 40) + "A 2p", totalInvUnits, "ea", 24.65);
+  if (!mi) a("Disconnect", "DC Disconnect 600V", totalInvUnits, "ea", 51);
   a("Ground", "5/8\"x8' CU Ground Rod", 2, "ea", 18.5);   // NEC 250.53(A)(2)
   a("Ground", "Acorn Ground Rod Clamp", 2, "ea", 2.79);    // 1 per rod
   a("Ground", "Grounding Bus Bar", 1, "ea", 8.50);

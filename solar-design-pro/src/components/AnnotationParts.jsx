@@ -1,5 +1,6 @@
 import { ff } from '../theme.js';
 import { DEF_W, DEF_H } from '../calc/annotation-geo.js';
+import { pvArrayGroup } from '../diagrams/shared.jsx';
 
 const HANDLE_SZ = 8;
 
@@ -17,35 +18,48 @@ export function McatBtn({ m, sel, onClick }) {
   );
 }
 
-export function MarkerIcon({ mk, idx, mcat, onDown, onResize, selected }) {
+export function MarkerIcon({ mk, idx, mcat, onDown, onResize, selected, modGroups, layPos, md }) {
   const mw = mk.w || DEF_W, mh = mk.h || DEF_H;
   const hw = mw / 2, hh = mh / 2;
   const iconSz = Math.round(Math.min(mw, mh) * 0.55), iconHalf = iconSz / 2;
+
+  // Special rendering for pv_array markers — show actual module layout
+  const isPvArray = mk.ct === "pv_array";
+  const arrW = isPvArray ? Math.max(mw, 140) : mw;
+  const arrH = isPvArray ? Math.max(mh, 50) : mh;
+  const ahw = arrW / 2, ahh = arrH / 2;
+
   return (
     <g>
       <g style={{ cursor: "grab" }} onMouseDown={onDown} onTouchStart={onDown}>
-        <rect x={mk.x - hw} y={mk.y - hh} width={mw} height={mh} rx={6}
-          fill="#ffffffee" stroke={mcat.cl} strokeWidth={2} />
-        <svg x={mk.x - iconHalf} y={mk.y - iconHalf} width={iconSz} height={iconSz} viewBox="0 0 24 24"
-          fill="none" stroke={mcat.cl} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <path d={mcat.svg} /></svg>
-        <text x={mk.x} y={mk.y + hh + 12} textAnchor="middle" fill="#fff" fontSize={10}
+        {isPvArray ? (
+          <g transform={`translate(${mk.x - ahw},${mk.y - ahh})`}>
+            {pvArrayGroup(modGroups, layPos, md, { maxW: arrW, maxH: arrH })}
+          </g>
+        ) : (<>
+          <rect x={mk.x - hw} y={mk.y - hh} width={mw} height={mh} rx={6}
+            fill="#ffffffee" stroke={mcat.cl} strokeWidth={2} />
+          <svg x={mk.x - iconHalf} y={mk.y - iconHalf} width={iconSz} height={iconSz} viewBox="0 0 24 24"
+            fill="none" stroke={mcat.cl} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d={mcat.svg} /></svg>
+        </>)}
+        <text x={mk.x} y={mk.y + (isPvArray ? ahh : hh) + 12} textAnchor="middle" fill="#fff" fontSize={10}
           fontFamily={ff} fontWeight="600" style={{ textShadow: "0 1px 3px #000" }}>{mk.lb}</text>
-        <text x={mk.x} y={mk.y - hh - 4} textAnchor="middle" fill={mcat.cl} fontSize={9}
+        <text x={mk.x} y={mk.y - (isPvArray ? ahh : hh) - 4} textAnchor="middle" fill={mcat.cl} fontSize={9}
           fontFamily={ff} fontWeight="700">#{idx + 1}</text>
       </g>
       {selected && onResize && <>
         <g style={{ cursor: "nwse-resize" }}
           onMouseDown={e => onResize(e, "corner")} onTouchStart={e => onResize(e, "corner")}>
-          <rect x={mk.x + hw - HANDLE_SZ / 2} y={mk.y + hh - HANDLE_SZ / 2}
+          <rect x={mk.x + (isPvArray ? ahw : hw) - HANDLE_SZ / 2} y={mk.y + (isPvArray ? ahh : hh) - HANDLE_SZ / 2}
             width={HANDLE_SZ} height={HANDLE_SZ} rx={2} fill={mcat.cl} stroke="#fff" strokeWidth={1} /></g>
         <g style={{ cursor: "ew-resize" }}
           onMouseDown={e => onResize(e, "width")} onTouchStart={e => onResize(e, "width")}>
-          <rect x={mk.x + hw - HANDLE_SZ / 2} y={mk.y - HANDLE_SZ / 2}
+          <rect x={mk.x + (isPvArray ? ahw : hw) - HANDLE_SZ / 2} y={mk.y - HANDLE_SZ / 2}
             width={HANDLE_SZ} height={HANDLE_SZ} rx={2} fill={mcat.cl} stroke="#fff" strokeWidth={1} opacity={0.7} /></g>
         <g style={{ cursor: "ns-resize" }}
           onMouseDown={e => onResize(e, "height")} onTouchStart={e => onResize(e, "height")}>
-          <rect x={mk.x - HANDLE_SZ / 2} y={mk.y + hh - HANDLE_SZ / 2}
+          <rect x={mk.x - HANDLE_SZ / 2} y={mk.y + (isPvArray ? ahh : hh) - HANDLE_SZ / 2}
             width={HANDLE_SZ} height={HANDLE_SZ} rx={2} fill={mcat.cl} stroke="#fff" strokeWidth={1} opacity={0.7} /></g>
       </>}
     </g>

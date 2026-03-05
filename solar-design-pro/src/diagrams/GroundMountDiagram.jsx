@@ -1,8 +1,8 @@
 import { forwardRef } from 'react';
 import { ff, c1, c2, bd, ac, tx, td } from '../theme.js';
-import { badge, wireSchedule } from './shared.jsx';
+import { badge, wireSchedule, pvArrayGroup } from './shared.jsx';
 
-const GroundMountDiagram = forwardRef(({ svW, svH, es, isComm, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr, children }, ref) => {
+const GroundMountDiagram = forwardRef(({ svW, svH, es, isComm, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr, modGroups, layPos, md, children }, ref) => {
   const rows = [
     { seg: "Array → Combiner", spec: dcPV, circ: `DC PV Strings ×${nStr}`, clr: "#dc2626", len: wr?.pv },
     ...(dcRun ? [{ seg: "Combiner → Inverter (trench)", spec: dcRun, circ: "DC Home Run — PVC", clr: "#b45309", len: wr?.dc }] : []),
@@ -21,9 +21,7 @@ const GroundMountDiagram = forwardRef(({ svW, svH, es, isComm, dcPV, dcRun, acRu
 
       {/* Ground mount array */}
       {[0, 1, 2, 3, 4].map(i => <rect key={i} x={80 + i * 80} y={300} width={4} height={50} fill="#78716c" rx={1} />)}
-      <polygon points="70,220 420,220 440,300 90,300" fill="#1e40af" opacity={0.6} stroke="#1e3a8a" strokeWidth={1.5} />
-      {[0, 1, 2, 3, 4, 5].map(i => <line key={i} x1={76 + i * 60} y1={220 + (i * 0.5)} x2={96 + i * 60} y2={300} stroke="#3b82f6" strokeWidth={0.5} />)}
-      <line x1={80} y1={260} x2={430} y2={260} stroke="#3b82f6" strokeWidth={0.5} />
+      <g transform="translate(70,220)">{pvArrayGroup(modGroups, layPos, md, { maxW: 370, maxH: 80 })}</g>
       {badge(255, 212, "GROUND MOUNT PV ARRAY", "#1e40af")}
 
       {/* Underground trench */}

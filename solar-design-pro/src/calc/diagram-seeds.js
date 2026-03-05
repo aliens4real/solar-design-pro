@@ -14,9 +14,11 @@ function ln(id, from, to, label, spec, dir) {
 
 // ═══ Residential Roof Mount ═══
 
-export function seedResidential(es, specs) {
+export function seedResidential(es, specs, isComm, ivs) {
   const { dcPV, dcRun, acRun, seRun, gecRun } = specs;
   const markers = [
+    mk("res_arr", 250, 180, "pv_array", "PV Array", "Rooftop"),
+    mk("res_rb", 340, 260, "roofbox", "Roof Box", "SolaDeck 0799"),
     mk("res_rsd", 383, 129, "rapid_sd", "Rapid Shutdown", "NEC 690.12"),
     mk("res_inv", 468, 416, "inverter", "Inverter", "DC→AC"),
     mk("res_acd", 565, 416, "disconnect", "AC Disconnect", "Lockable"),
@@ -25,7 +27,19 @@ export function seedResidential(es, specs) {
     mk("res_gec", 913, 417, "grounding", "GEC", "Ground Rod"),
     mk("res_pm", 651, 467, "prod_meter", "Prod. Meter", ""),
   ];
+
+  // Multi-inverter: add extra inverter markers
+  if (ivs && ivs.length > 1) {
+    for (let i = 1; i < ivs.length; i++) {
+      const e = ivs[i];
+      markers.push(mk(`res_inv_${i}`, 468 + i * 50, 416 + i * 35, "inverter", `Inverter ${i + 1}`, e.inv?.nm || ""));
+      markers.push(mk(`res_acd_${i}`, 565 + i * 50, 416 + i * 35, "disconnect", `AC Disc. ${i + 1}`, "Lockable"));
+    }
+  }
+
   const lines = [];
+  lines.push(ln("res_ln_pv", "res_arr", "res_rb", "DC PV Source", dcPV));
+  lines.push(ln("res_ln_rb", "res_rb", "res_rsd", "DC Roof Box", dcRun));
   if (dcRun) {
     lines.push(ln("res_ln_dc", "res_rsd", "res_inv", "DC Home Run", dcRun));
   }
@@ -38,9 +52,11 @@ export function seedResidential(es, specs) {
 
 // ═══ Commercial Roof Mount ═══
 
-export function seedCommercial(es, specs) {
+export function seedCommercial(es, specs, isComm, ivs) {
   const { dcPV, dcRun, acRun, seRun, gecRun } = specs;
   const markers = [
+    mk("com_arr", 310, 170, "pv_array", "PV Array", "Rooftop"),
+    mk("com_rb", 530, 220, "roofbox", "Roof Box", "SolaDeck 0799"),
     mk("com_rsd", 458, 179, "rapid_sd", "Rapid SD", "NEC 690.12"),
     mk("com_cmb", 115, 244, "combiner", "Combiner", "Rooftop"),
     mk("com_inv", 188, 244, "inverter", "Inverter(s)", "3-Phase"),
@@ -51,6 +67,14 @@ export function seedCommercial(es, specs) {
     mk("com_dsc", 928, 351, "disconnect", "Disconnect", "Service Ent."),
     mk("com_gec", 923, 405, "grounding", "GEC", "Ground"),
   ];
+
+  if (ivs && ivs.length > 1) {
+    for (let i = 1; i < ivs.length; i++) {
+      const e = ivs[i];
+      markers.push(mk(`com_inv_${i}`, 188 + i * 50, 244 + i * 30, "inverter", `Inverter ${i + 1}`, e.inv?.nm || ""));
+    }
+  }
+
   const lines = [];
   lines.push(ln("com_ln_d1", "com_cmb", "com_inv", "DC Combined", dcRun || dcPV));
   lines.push(ln("com_ln_ac", "com_inv", "com_acd", "AC 3-Phase", acRun));
@@ -64,9 +88,10 @@ export function seedCommercial(es, specs) {
 
 // ═══ Ground Mount ═══
 
-export function seedGround(es, specs, isComm) {
+export function seedGround(es, specs, isComm, ivs) {
   const { dcPV, dcRun, acRun, seRun, gecRun } = specs;
   const markers = [
+    mk("gnd_arr", 255, 250, "pv_array", "PV Array", "Ground Mount"),
     mk("gnd_cmb", 470, 293, "combiner", "Combiner Box", "At Array"),
     mk("gnd_inv", 626, 291, "inverter", "Inverter", "Pad Mount"),
     mk("gnd_acd", 715, 294, "disconnect", "AC Disconnect", "Lockable"),
@@ -88,9 +113,10 @@ export function seedGround(es, specs, isComm) {
 
 // ═══ Carport Mount ═══
 
-export function seedCarport(es, specs) {
+export function seedCarport(es, specs, isComm, ivs) {
   const { dcPV, dcRun, acRun, seRun, gecRun } = specs;
   const markers = [
+    mk("cp_arr", 255, 185, "pv_array", "PV Array", "Carport Canopy"),
     mk("cp_cmb", 434, 286, "combiner", "Combiner", "On Column"),
     mk("cp_inv", 533, 289, "inverter", "Inverter", "Pad/Wall"),
     mk("cp_acd", 630, 292, "disconnect", "AC Disconnect", "Lockable"),

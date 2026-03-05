@@ -71,6 +71,91 @@ export const wireSchedule = (rows, ty, svW, title) => {
   );
 };
 
+// PV Array Group — renders actual module layout from modGroups/layPos
+// opts: {maxW, maxH} — bounding box in SVG units
+export const pvArrayGroup = (modGroups, layPos, md, opts) => {
+  const { maxW = 180, maxH = 60 } = opts || {};
+  if (!modGroups || modGroups.length === 0 || !md) {
+    // Fallback: static blue rectangle with grid lines
+    return (
+      <g>
+        <rect width={maxW} height={maxH} rx={2} fill="#1e40af" opacity={0.7} stroke="#1e3a8a" strokeWidth={1} />
+        {Array.from({ length: Math.floor(maxW / 30) }, (_, i) => (
+          <line key={`v${i}`} x1={(i + 1) * 30} y1={0} x2={(i + 1) * 30} y2={maxH} stroke="#3b82f6" strokeWidth={0.5} />
+        ))}
+        <line x1={0} y1={maxH / 2} x2={maxW} y2={maxH / 2} stroke="#3b82f6" strokeWidth={0.5} />
+      </g>
+    );
+  }
+
+  // Calculate bounding box of all module positions across all groups
+  const lm = md.lm || 1722, wm = md.wm || 1134;
+  let allMinX = Infinity, allMinY = Infinity, allMaxX = -Infinity, allMaxY = -Infinity;
+  const groupData = [];
+
+  modGroups.forEach(g => {
+    const cnt = +g.cnt || 0;
+    if (cnt === 0) return;
+    const positions = layPos?.[g.id] || [];
+    if (positions.length === 0) return;
+    const ori = g.ori || "L";
+    const mw = ori === "L" ? lm : wm;
+    const mh = ori === "L" ? wm : lm;
+    positions.forEach(p => {
+      allMinX = Math.min(allMinX, p.x);
+      allMinY = Math.min(allMinY, p.y);
+      allMaxX = Math.max(allMaxX, p.x + mw);
+      allMaxY = Math.max(allMaxY, p.y + mh);
+    });
+    groupData.push({ g, positions, mw, mh, ori });
+  });
+
+  if (groupData.length === 0) {
+    return (
+      <g>
+        <rect width={maxW} height={maxH} rx={2} fill="#1e40af" opacity={0.7} stroke="#1e3a8a" strokeWidth={1} />
+        <line x1={0} y1={maxH / 2} x2={maxW} y2={maxH / 2} stroke="#3b82f6" strokeWidth={0.5} />
+      </g>
+    );
+  }
+
+  const bboxW = allMaxX - allMinX || 1;
+  const bboxH = allMaxY - allMinY || 1;
+  const scale = Math.min(maxW / bboxW, maxH / bboxH) * 0.92;
+  const offX = (maxW - bboxW * scale) / 2;
+  const offY = (maxH - bboxH * scale) / 2;
+
+  const colors = ["#1e40af", "#1565c0", "#0d47a1", "#1976d2"];
+
+  return (
+    <g>
+      <rect width={maxW} height={maxH} rx={2} fill="#1e40af" opacity={0.12} stroke="#1e3a8a" strokeWidth={0.8} />
+      {groupData.map((gd, gi) => {
+        const clr = colors[gi % colors.length];
+        return (
+          <g key={gd.g.id}>
+            {gd.positions.map((p, pi) => {
+              const rx = offX + (p.x - allMinX) * scale;
+              const ry = offY + (p.y - allMinY) * scale;
+              const rw = gd.mw * scale;
+              const rh = gd.mh * scale;
+              return (
+                <rect key={pi} x={rx} y={ry} width={rw} height={rh}
+                  fill={clr} opacity={0.6} stroke={clr} strokeWidth={0.4} rx={0.5} />
+              );
+            })}
+            {modGroups.length > 1 && gd.positions.length > 0 && (
+              <text x={offX + (gd.positions[0].x - allMinX) * scale}
+                y={offY + (gd.positions[0].y - allMinY) * scale - 2}
+                fill={clr} fontSize={Math.max(5, maxH * 0.1)} fontFamily={ff} fontWeight={600}>{gd.g.nm}</text>
+            )}
+          </g>
+        );
+      })}
+    </g>
+  );
+};
+
 // Legend
 export const legend = (svW, svH) => (
   <g>

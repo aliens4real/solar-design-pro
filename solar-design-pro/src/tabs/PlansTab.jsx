@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { ff, fs, c1, c2, bg, bd, ac, tx, td, gn, rd, bl, bt, cd, inp } from '../theme.js';
 import { COND } from '../data/nec-tables.js';
 
-export default function PlansTab({ md, iv, sz, pj, dsg, totalMods, totalKw, modGroups, logo, setLogo, logoRef, printRef, modSz, faceSz, layPos }) {
+export default function PlansTab({ md, iv, sz, pj, dsg, totalMods, totalKw, modGroups, logo, setLogo, logoRef, printRef, modSz, faceSz, layPos, ivs, totalIvKw }) {
 
   /* ═══ COMPUTED VALUES ═══ */
   const ready = md && iv && sz;
@@ -128,9 +128,11 @@ export default function PlansTab({ md, iv, sz, pj, dsg, totalMods, totalKw, modG
             <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 18 }}>EQUIPMENT</div>
             <table style={tbl}><tbody>
               <tr><td style={th}>Module</td><td style={tcell}>{md.nm}</td><td style={th}>Qty</td><td style={tcR}>{nMods}</td></tr>
-              <tr><td style={th}>Inverter</td><td style={tcell}>{iv.nm}</td><td style={th}>Qty</td><td style={tcR}>{nInv}</td></tr>
+              {ivs && ivs.length > 1 ? ivs.map((e, i) => (
+                <tr key={e.id}><td style={th}>Inverter {i + 1}{i === 0 ? " (Primary)" : ""}</td><td style={tcell}>{e.inv.nm} ({e.inv.kw}kW)</td><td style={th}>Qty</td><td style={tcR}>{e.qty}</td></tr>
+              )) : <tr><td style={th}>Inverter</td><td style={tcell}>{iv.nm}</td><td style={th}>Qty</td><td style={tcR}>{nInv}</td></tr>}
               <tr><td style={th}>Strings</td><td style={tcR}>{nStr}</td><td style={th}>Modules/String</td><td style={tcR}>{modsPerStr}</td></tr>
-              <tr><td style={th}>Inverter Type</td><td style={tcell}>{iv.tp}</td><td style={th}>DC:AC</td><td style={tcR}>{dcac}</td></tr>
+              <tr><td style={th}>Inverter Type</td><td style={tcell}>{iv.tp}</td><td style={th}>DC:AC</td><td style={tcR}>{ivs && ivs.length > 1 && totalIvKw > 0 ? (totalKw / totalIvKw).toFixed(2) : dcac}</td></tr>
             </tbody></table>
 
             {/* Module Groups */}
@@ -557,7 +559,9 @@ export default function PlansTab({ md, iv, sz, pj, dsg, totalMods, totalKw, modG
               </tr></thead>
               <tbody>
                 <tr><td style={tcell}>PV Module</td><td style={tcell}>{md.nm} ({md.w}W)</td><td style={tcR}>{nMods}</td><td style={tcell}>{nStr} strings x {modsPerStr} modules</td></tr>
-                <tr><td style={tcell}>Inverter</td><td style={tcell}>{iv.nm} ({iv.kw}kW)</td><td style={tcR}>{nInv}</td><td style={tcell}>{iv.tp} type, {iv.mppt || 1} MPPT</td></tr>
+                {ivs && ivs.length > 1 ? ivs.map((e, i) => (
+                  <tr key={e.id}><td style={tcell}>Inverter {i + 1}{i === 0 ? " (Primary)" : ""}</td><td style={tcell}>{e.inv.nm} ({e.inv.kw}kW)</td><td style={tcR}>{e.qty}</td><td style={tcell}>{e.inv.tp} type, {e.inv.mppt || 1} MPPT</td></tr>
+                )) : <tr><td style={tcell}>Inverter</td><td style={tcell}>{iv.nm} ({iv.kw}kW)</td><td style={tcR}>{nInv}</td><td style={tcell}>{iv.tp} type, {iv.mppt || 1} MPPT</td></tr>}
                 {iv.tp === "micro" && (
                   <tr><td style={tcell}>Q-Cable / Trunk</td><td style={tcell}>Microinverter trunk cable</td><td style={tcR}>{nMods}</td><td style={tcell}>1 per module</td></tr>
                 )}

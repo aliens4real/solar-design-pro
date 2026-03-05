@@ -12,6 +12,7 @@ const svcOpts = ["100","125","150","200","225","320","400"];
 export default function ProjectTab({
   pj, u, md, iv, sz, totalMods, totalKw, modGroups, addGroup, updGroup, delGroup,
   climBusy, climMsg, lookupClimate, climRan, invRec, setInvRec, recommendInverter,
+  ivList, addIv, updIv, delIv, ivs, totalIvKw,
   setTab, chat, addrQ, addrSug, addrOpen, addrLoading, addrRect, addrHi, addrRef, addrInpRef,
   searchAddr, pickAddr, setAddrOpen, updateRect, addrKey
 }) {
@@ -234,33 +235,76 @@ export default function ProjectTab({
       {/* ═══ INVERTER SELECTOR ═══ */}
       <div style={{ ...cd, marginBottom: 14 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: ac, fontFamily: ff, textTransform: "uppercase", letterSpacing: "0.08em" }}>Inverter</div>
-          {md && totalKw > 0 && <button style={{ ...bt(false), fontSize: 10, padding: "4px 10px" }} onClick={recommendInverter}>⚡ Auto-Recommend</button>}
+          <div style={{ fontSize: 11, fontWeight: 700, color: ac, fontFamily: ff, textTransform: "uppercase", letterSpacing: "0.08em" }}>Inverter{ivList.length > 1 ? "s" : ""}</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {md && totalKw > 0 && <button style={{ ...bt(false), fontSize: 10, padding: "4px 10px" }} onClick={recommendInverter}>⚡ Auto-Recommend</button>}
+            <button style={{ ...bt(true), fontSize: 10, padding: "4px 10px" }} onClick={addIv}>+ Add Inverter</button>
+          </div>
         </div>
-        <select style={{ ...inp, marginBottom: 8 }} value={iv?.id || ""} onChange={e => u("ii", e.target.value)}>
-          <option value="">— Select Inverter —</option>
-          <optgroup label="SMA Sunny Boy Smart Energy">
-            {INVS.filter(i => i.id.startsWith("sma")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}
-          </optgroup>
-          <optgroup label="SolarEdge Home Hub">
-            {INVS.filter(i => i.id.startsWith("se")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}
-          </optgroup>
-          <optgroup label="Fronius Primo GEN24">
-            {INVS.filter(i => i.id.startsWith("fr")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}
-          </optgroup>
-          <optgroup label="Sol-Ark">
-            {INVS.filter(i => i.id.startsWith("sa")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}
-          </optgroup>
-          <optgroup label="Tigo">
-            {INVS.filter(i => i.id.startsWith("tg")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}
-          </optgroup>
-          <optgroup label="Enphase IQ8">
-            {INVS.filter(i => i.id.startsWith("iq")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}
-          </optgroup>
-        </select>
-        {invRec && <div style={{ fontSize: 11, fontFamily: ff, color: gn, marginBottom: 6 }}>{invRec}</div>}
-        {iv && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, fontSize: 10, fontFamily: ff }}>
+
+        {/* Single inverter (legacy / no ivList entries) */}
+        {ivList.length === 0 && (<>
+          <select style={{ ...inp, marginBottom: 8 }} value={iv?.id || ""} onChange={e => u("ii", e.target.value)}>
+            <option value="">— Select Inverter —</option>
+            <optgroup label="SMA Sunny Boy Smart Energy">
+              {INVS.filter(i => i.id.startsWith("sma")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}
+            </optgroup>
+            <optgroup label="SolarEdge Home Hub">
+              {INVS.filter(i => i.id.startsWith("se")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}
+            </optgroup>
+            <optgroup label="Fronius Primo GEN24">
+              {INVS.filter(i => i.id.startsWith("fr")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}
+            </optgroup>
+            <optgroup label="Sol-Ark">
+              {INVS.filter(i => i.id.startsWith("sa")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}
+            </optgroup>
+            <optgroup label="Tigo">
+              {INVS.filter(i => i.id.startsWith("tg")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}
+            </optgroup>
+            <optgroup label="Enphase IQ8">
+              {INVS.filter(i => i.id.startsWith("iq")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}
+            </optgroup>
+          </select>
+        </>)}
+
+        {/* Multi-inverter list */}
+        {ivList.length > 0 && ivList.map((entry, ei) => {
+          const eiv = INVS.find(x => x.id === entry.model);
+          return (
+            <div key={entry.id} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+              {ei === 0 && <span style={{ fontSize: 9, fontFamily: ff, color: ac, fontWeight: 700, width: 46, flexShrink: 0 }}>Primary</span>}
+              {ei > 0 && <span style={{ fontSize: 9, fontFamily: ff, color: td, width: 46, flexShrink: 0 }}>Inv {ei + 1}</span>}
+              <select style={{ ...inp, flex: 1 }} value={entry.model} onChange={e => updIv(entry.id, "model", e.target.value)}>
+                <option value="">— Select —</option>
+                <optgroup label="SMA">{INVS.filter(i => i.id.startsWith("sma")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}</optgroup>
+                <optgroup label="SolarEdge">{INVS.filter(i => i.id.startsWith("se")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}</optgroup>
+                <optgroup label="Fronius">{INVS.filter(i => i.id.startsWith("fr")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}</optgroup>
+                <optgroup label="Sol-Ark">{INVS.filter(i => i.id.startsWith("sa")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}</optgroup>
+                <optgroup label="Tigo">{INVS.filter(i => i.id.startsWith("tg")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}</optgroup>
+                <optgroup label="Enphase">{INVS.filter(i => i.id.startsWith("iq")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}</optgroup>
+              </select>
+              <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <label style={{ fontSize: 9, color: td, fontFamily: ff }}>Qty</label>
+                <input style={{ ...inp, width: 42, textAlign: "center" }} type="number" min={1} value={entry.qty} onChange={e => updIv(entry.id, "qty", Math.max(1, +e.target.value || 1))} />
+              </div>
+              {eiv && <span style={{ fontSize: 10, fontFamily: ff, color: td, flexShrink: 0 }}>{(eiv.kw * entry.qty).toFixed(1)}kW</span>}
+              <button style={{ background: "none", border: "none", color: rd, cursor: "pointer", fontSize: 14, fontWeight: 700 }} onClick={() => delIv(entry.id)}>×</button>
+            </div>
+          );
+        })}
+
+        {/* Combined stats for multi-inverter */}
+        {ivList.length > 0 && totalIvKw > 0 && (
+          <div style={{ display: "flex", gap: 10, marginTop: 6, padding: "6px 10px", background: c2, borderRadius: 6, fontSize: 10, fontFamily: ff }}>
+            <span style={{ color: td }}>Total AC: <b style={{ color: ac }}>{totalIvKw.toFixed(1)} kW</b></span>
+            <span style={{ color: td }}>Inverters: <b style={{ color: tx }}>{ivs.reduce((s, e) => s + e.qty, 0)}</b></span>
+            {md && totalKw > 0 && <span style={{ color: td }}>DC:AC: <b style={{ color: totalKw / totalIvKw > 1.4 ? rd : gn }}>{(totalKw / totalIvKw).toFixed(2)}</b></span>}
+          </div>
+        )}
+
+        {invRec && <div style={{ fontSize: 11, fontFamily: ff, color: gn, marginTop: 6 }}>{invRec}</div>}
+        {iv && ivList.length === 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, fontSize: 10, fontFamily: ff, marginTop: 6 }}>
             {[["MaxDC", iv.dv + "V"], ["MPPT", iv.ml + "–" + iv.mh + "V"], ["MaxAC", iv.kw + "kW"], ["OCPD", iv.oc + "A"], ["Type", iv.tp], ["DC:AC", md ? ((totalKw / iv.kw).toFixed(2)) : "—"]].map(([l, v]) => (
               <div key={l} style={{ background: c2, borderRadius: 4, padding: "6px 4px", textAlign: "center" }}>
                 <div style={{ color: td, fontSize: 9 }}>{l}</div>

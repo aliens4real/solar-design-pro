@@ -22,6 +22,7 @@ import { McatBtn, MarkerIcon, LineLabel, BreakSymbol } from './AnnotationParts.j
 export default function AnnotationOverlay({
   mk, ln, updAn, getSvgPt, containerRef, containerSize,
   siteSpecs, SITE_RUNS, renderMode,
+  modGroups, layPos, md,
 }) {
   const [mode, setMode] = useState(MODE.SELECT);
   const [selCat, setSelCat] = useState("inverter");
@@ -211,7 +212,8 @@ export default function AnnotationOverlay({
             {isLineHL && <circle cx={mk.x} cy={mk.y} r={hlR} fill="none" stroke={ac} strokeWidth={2.5} strokeDasharray="4 3" />}
             <MarkerIcon mk={mk} idx={i} mcat={mcat} selected={isSel}
               onDown={e => handleDragStart(e, mk.id)}
-              onResize={(e, axis) => handleResizeStart(e, mk.id, axis)} />
+              onResize={(e, axis) => handleResizeStart(e, mk.id, axis)}
+              modGroups={modGroups} layPos={layPos} md={md} />
           </g>);
       })}
       {/* ── Layer 3: Conduit run handles ── */}

@@ -1,8 +1,8 @@
 import { forwardRef } from 'react';
 import { ff, c1, c2, bd, ac, tx, td } from '../theme.js';
-import { badge, wireSchedule } from './shared.jsx';
+import { badge, wireSchedule, pvArrayGroup } from './shared.jsx';
 
-const CarportDiagram = forwardRef(({ svW, svH, es, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr, children }, ref) => {
+const CarportDiagram = forwardRef(({ svW, svH, es, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr, modGroups, layPos, md, children }, ref) => {
   const rows = [
     { seg: "Array → Combiner", spec: dcPV, circ: `DC PV ×${nStr} strings`, clr: "#dc2626", len: wr?.pv },
     ...(dcRun ? [{ seg: "Combiner → Inverter", spec: dcRun, circ: "DC Home Run", clr: "#b45309", len: wr?.dc }] : []),
@@ -21,9 +21,7 @@ const CarportDiagram = forwardRef(({ svW, svH, es, dcPV, dcRun, acRun, seRun, ge
 
       {/* Carport structure */}
       {[100, 250, 400].map(x => <rect key={x} x={x} y={210} width={6} height={150} fill="#57534e" rx={1} />)}
-      <polygon points="80,170 420,170 430,210 90,210" fill="#1e40af" opacity={0.6} stroke="#1e3a8a" strokeWidth={1.5} />
-      {[0, 1, 2, 3, 4, 5].map(i => <line key={i} x1={90 + i * 58} y1={171} x2={98 + i * 58} y2={210} stroke="#3b82f6" strokeWidth={0.5} />)}
-      <line x1={85} y1={190} x2={425} y2={190} stroke="#3b82f6" strokeWidth={0.5} />
+      <g transform="translate(80,170)">{pvArrayGroup(modGroups, layPos, md, { maxW: 350, maxH: 40 })}</g>
       {badge(255, 163, "CARPORT PV CANOPY", "#1e40af")}
       <text x={255} y={340} textAnchor="middle" fill={td} fontSize={10} fontFamily={ff} opacity={0.5}>PARKING AREA</text>
       {[140, 220, 300].map(x => <rect key={x} x={x} y={368} width={50} height={2} fill="#94a3b8" opacity={0.5} />)}

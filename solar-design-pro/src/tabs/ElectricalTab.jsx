@@ -166,7 +166,7 @@ function StringLayout({ md, iv, sz, dsg }) {
   );
 }
 
-export default function ElectricalTab({ md, iv, sz, dsg, climBusy, lookupClimate, climRan, pj }) {
+export default function ElectricalTab({ md, iv, sz, dsg, climBusy, lookupClimate, climRan, pj, ivs, totalIvKw }) {
   return (
     <div style={{ maxWidth: 920, margin: "0 auto" }} className="fi">
       <h2 style={{ fontFamily: ff, fontSize: 16, color: ac, margin: "0 0 14px", fontWeight: 700 }}>⚡ Electrical Design — NEC 690</h2>
@@ -217,6 +217,26 @@ export default function ElectricalTab({ md, iv, sz, dsg, climBusy, lookupClimate
             <div style={{ color: ac, fontWeight: 700, fontSize: 11, fontFamily: ff, marginBottom: 4 }}>DESIGN NOTES:</div>
             {dsg.notes.map((n, i) => <div key={i} style={{ paddingLeft: 12, borderLeft: `2px solid ${bd}`, marginBottom: 4 }}>• {n}</div>)}</div>}
         </div>}
+
+        {/* Multi-inverter summary */}
+        {ivs && ivs.length > 1 && (
+          <div style={{ ...cd, gridColumn: "span 2", background: c2 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: ac, marginBottom: 10, fontFamily: ff }}>INVERTER SUMMARY</div>
+            <div style={{ fontSize: 11, fontFamily: ff, marginBottom: 6, color: td }}>Primary inverter ({iv?.nm}) used for string sizing. All inverters listed below.</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, fontSize: 10, fontFamily: ff }}>
+              {ivs.map((e, i) => (
+                <div key={e.id} style={{ ...cd, padding: 8, background: c1, borderLeft: i === 0 ? `3px solid ${ac}` : "none" }}>
+                  <div style={{ color: td, fontSize: 9 }}>{i === 0 ? "PRIMARY" : `Inverter ${i + 1}`}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: ac }}>{e.inv.nm}</div>
+                  <div style={{ color: tx }}>{e.inv.kw}kW x {e.qty} = {(e.inv.kw * e.qty).toFixed(1)}kW</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 8, fontSize: 11, fontFamily: ff, color: tx }}>
+              Total AC capacity: <b style={{ color: ac }}>{totalIvKw.toFixed(1)} kW</b>
+            </div>
+          </div>
+        )}
 
         {/* String Layout Diagram */}
         {dsg && <StringLayout md={md} iv={iv} sz={sz} dsg={dsg} />}

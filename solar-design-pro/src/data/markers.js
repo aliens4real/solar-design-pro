@@ -16,6 +16,8 @@ export const MCATS = [
   {id:"transformer",lb:"Transformer",cl:"#0f766e",ic:"⊜",svg:"M8 4a4 4 0 100 8 4 4 0 000-8zM16 12a4 4 0 100 8 4 4 0 000-8zM8 12v0M16 12v0"},
   {id:"prod_meter",lb:"Prod. Meter",cl:"#6366f1",ic:"⊙",svg:"M12 2a10 10 0 100 20 10 10 0 000-20zM12 12l5-3M8 12h0"},
   {id:"trough",lb:"Elec. Trough",cl:"#78716c",ic:"▭",svg:"M2 8h20v8H2V8zm4 0v8m4-8v8m4-8v8m4-8v8"},
+  {id:"roofbox",lb:"Roof Box",cl:"#b45309",ic:"⊟",svg:"M3 6h18v12H3V6zm0 3h18M9 6v12M15 6v12"},
+  {id:"pv_array",lb:"PV Array",cl:"#1e40af",ic:"☀",svg:"M4 4h16v12H4V4zm4 0v12m4-12v12m4-12v12M4 10h16"},
 ];
 
 export const SC = ["#f59e0b","#22c55e","#8b5cf6","#ef4444","#06b6d4","#ec4899","#84cc16","#f97316"];

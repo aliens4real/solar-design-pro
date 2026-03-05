@@ -69,6 +69,21 @@ export default function App() {
   const [climBusy, setClimBusy] = useState(false), [climMsg, setClimMsg] = useState("");
   const [invRec, setInvRec] = useState("");
 
+  // ── Multi-Inverter List ──
+  const [ivList, sIvList] = useState([]);
+  const addIv = () => sIvList(l => [...l, { id: Date.now(), model: iv?.id || "", qty: 1 }]);
+  const updIv = (id, k, v) => sIvList(l => l.map(e => e.id === id ? { ...e, [k]: v } : e));
+  const delIv = (id) => sIvList(l => l.filter(e => e.id !== id));
+  const ivs = ivList.map(e => ({ ...e, inv: INVS.find(x => x.id === e.model) })).filter(e => e.inv);
+  const totalIvKw = ivs.reduce((s, e) => s + (e.inv.kw * e.qty), 0);
+
+  // Sync pj.ii with ivList[0] when ivList changes
+  useEffect(() => {
+    if (ivList.length > 0 && ivList[0].model && ivList[0].model !== pj.ii) {
+      u("ii", ivList[0].model);
+    }
+  }, [ivList]);
+
   // ── Module Groups ──
   const [roofType, setRoofType] = useState("gable");
   const [modGroups, setModGroups] = useState([{ id: 1, nm: "South Face", az: "180", ori: "L", cnt: "", rp: "", fw: "30", fd: "18" }]);
@@ -245,7 +260,7 @@ export default function App() {
   const sz = strCalc(md, iv, pj.tl, pj.th, pj.mt);
 
   // ── Effects ──
-  useEffect(() => { if (dsg && md && iv) { sPk(mkPack(md, iv, dsg, sz, wr, pj.es, pht)); } }, [dsg, md, iv, sz, wr, pj.es, pht]);
+  useEffect(() => { if (dsg && md && iv) { sPk(mkPack(md, iv, dsg, sz, wr, pj.es, pht, ivs)); } }, [dsg, md, iv, sz, wr, pj.es, pht, ivs]);
   useEffect(() => { cr.current?.scrollIntoView({ behavior: "smooth" }); }, [ms]);
   useEffect(() => {
     const h = e => { if ((e.key === "Delete" || e.key === "Backspace") && laySel && tab === "layout") { e.preventDefault(); removeSelMod(); } };
@@ -403,6 +418,7 @@ RULES:
           modGroups={modGroups} addGroup={addGroup} updGroup={updGroup} delGroup={delGroup}
           climBusy={climBusy} climMsg={climMsg} lookupClimate={lookupClimate} climRan={climRan}
           invRec={invRec} setInvRec={setInvRec} recommendInverter={recommendInverter}
+          ivList={ivList} addIv={addIv} updIv={updIv} delIv={delIv} ivs={ivs} totalIvKw={totalIvKw}
           setTab={setTab} chat={chat}
           addrQ={addrQ} addrSug={addrSug} addrOpen={addrOpen} addrLoading={addrLoading} addrRect={addrRect} addrHi={addrHi}
           addrRef={addrRef} addrInpRef={addrInpRef} searchAddr={searchAddr} pickAddr={pickAddr}
@@ -411,7 +427,7 @@ RULES:
 
         {tab === "ai" && <AiDesignTab ms={ms} ci={ci} sCi={sCi} cb={cb} chat={chat} cr={cr} />}
 
-        {tab === "electrical" && <ElectricalTab md={md} iv={iv} sz={sz} dsg={dsg} climBusy={climBusy} lookupClimate={lookupClimate} climRan={climRan} pj={pj} />}
+        {tab === "electrical" && <ElectricalTab md={md} iv={iv} sz={sz} dsg={dsg} climBusy={climBusy} lookupClimate={lookupClimate} climRan={climRan} pj={pj} ivs={ivs} totalIvKw={totalIvKw} />}
 
         {tab === "layout" && <>
           <LayoutTab
@@ -426,7 +442,8 @@ RULES:
             faceScale={faceScale} faceSz={faceSz}
             SETBACK_FT={SETBACK_FT} LAY_W={LAY_W} GAP={GAP}
           />
-          <SiteElectricalTab pj={pj} sz={sz} iv={iv} dsg={dsg} dAn={dAn} sDan={sDan} />
+          <SiteElectricalTab pj={pj} sz={sz} iv={iv} dsg={dsg} dAn={dAn} sDan={sDan}
+            modGroups={modGroups} layPos={layPos} md={md} ivs={ivs} />
         </>}
 
         {tab === "plans" && <PlansTab
@@ -434,6 +451,7 @@ RULES:
           totalMods={totalMods} totalKw={totalKw} modGroups={modGroups}
           logo={logo} setLogo={setLogo} logoRef={logoRef} printRef={printRef}
           modSz={modSz} faceSz={faceSz} layPos={layPos}
+          ivs={ivs} totalIvKw={totalIvKw}
         />}
 
         {tab === "photos" && <PhotosTab pht={pht} sPht={sPht} ap={ap} sAp={sAp} sz={sz} pj={pj} iv={iv} dsg={dsg} />}

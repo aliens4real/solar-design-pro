@@ -1,8 +1,8 @@
 import { forwardRef } from 'react';
 import { ff, c1, c2, bd, ac, tx, td } from '../theme.js';
-import { badge, wireSchedule } from './shared.jsx';
+import { badge, wireSchedule, pvArrayGroup } from './shared.jsx';
 
-const CommercialRoofDiagram = forwardRef(({ svW, svH, es, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr, children }, ref) => {
+const CommercialRoofDiagram = forwardRef(({ svW, svH, es, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr, modGroups, layPos, md, children }, ref) => {
   const rows = [
     { seg: "Array → Combiner", spec: dcPV, circ: "DC PV Strings ×" + nStr, clr: "#dc2626", len: wr?.pv },
     ...(dcRun ? [{ seg: "Combiner → Inverter", spec: dcRun, circ: "DC Combined", clr: "#b45309", len: wr?.dc }] : []),
@@ -27,9 +27,7 @@ const CommercialRoofDiagram = forwardRef(({ svW, svH, es, dcPV, dcRun, acRun, se
       <text x={310} y={280} textAnchor="middle" fill={td} fontSize={11} fontFamily={ff}>COMMERCIAL BUILDING</text>
 
       {/* Rooftop PV */}
-      <rect x={90} y={165} width={440} height={50} rx={2} fill="#1e40af" opacity={0.65} stroke="#1e3a8a" strokeWidth={1} />
-      {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => <line key={i} x1={90 + i * 50} y1={165} x2={90 + i * 50} y2={215} stroke="#3b82f6" strokeWidth={0.5} />)}
-      <line x1={90} y1={190} x2={530} y2={190} stroke="#3b82f6" strokeWidth={0.5} />
+      <g transform="translate(90,165)">{pvArrayGroup(modGroups, layPos, md, { maxW: 440, maxH: 50 })}</g>
       {badge(310, 158, "ROOFTOP PV ARRAY", "#1e40af")}
 
       {/* Rooftop conduit rack */}
