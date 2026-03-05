@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes pu {
+  0%, 100% { opacity: .4 }
+  50% { opacity: 1 }
+}
+
+@keyframes fi {
+  from { opacity: 0; transform: translateY(8px) }
+  to { opacity: 1; transform: none }
+}
+
+.fi { animation: fi .3s ease-out forwards }
+
+input:focus, textarea:focus, select:focus {
+  border-color: #d48c00 !important;
+}
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Cpath fill='%235c6370' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+::-webkit-scrollbar { width: 5px }
+::-webkit-scrollbar-thumb { background: #bbb; border-radius: 3px }
+
+@media print {
+  body, html { background: #fff !important; color: #000 !important }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .no-print { display: none !important }
+  .plan-page {
+    page-break-after: always;
+    break-after: page;
+    background: #fff !important;
+    color: #000 !important;
+    padding: 0.5in !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}

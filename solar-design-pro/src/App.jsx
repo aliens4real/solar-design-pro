@@ -1,0 +1,445 @@
+import { useState, useRef, useEffect, useCallback } from "react";
+
+// ── Data ──
+import { MODS } from './data/modules.js';
+import { INVS } from './data/inverters.js';
+import { MCATS } from './data/markers.js';
+import { COND } from './data/nec-tables.js';
+import { DEFAULT_LOGO } from './data/logo.js';
+
+// ── Calc ──
+import { strCalc } from './calc/string-calc.js';
+import { mkPack } from './calc/pack-list.js';
+
+// ── API ──
+import { callClaude, cleanJson } from './api/anthropic.js';
+import { geocodeAddr, lookupClimateData } from './api/climate.js';
+
+// ── Hooks ──
+import { useAddress } from './hooks/useAddress.js';
+
+// ── Theme ──
+import { ff, fs, bg, c1, c2, bd, ac, tx, td, gn, rd, bl, inp, lb, cd, bt } from './theme.js';
+
+// ── Components ──
+import Header from './components/Header.jsx';
+import TabBar from './components/TabBar.jsx';
+
+// ── Tabs ──
+import ProjectTab from './tabs/ProjectTab.jsx';
+import AiDesignTab from './tabs/AiDesignTab.jsx';
+import ElectricalTab from './tabs/ElectricalTab.jsx';
+import LayoutTab from './tabs/LayoutTab.jsx';
+import SiteElectricalTab from './tabs/SiteElectricalTab.jsx';
+import PlansTab from './tabs/PlansTab.jsx';
+import PhotosTab from './tabs/PhotosTab.jsx';
+import PackListTab from './tabs/PackListTab.jsx';
+
+export default function App() {
+  // ── Core State ──
+  const [tab, setTab] = useState("project");
+  const [pj, sPj] = useState({ nm: "", ad: "", ct: "", st: "", zp: "", kw: "", mt: "roof", rf: "asphalt", rp: "", es: "200", ds: "", eq: "", nt: "", tl: "", th: "", ir: "", ps: "", mi: "", ii: "" });
+  const [geo, setGeo] = useState(null);
+  const climRan = useRef(false);
+  const u = (k, v) => sPj(p => ({ ...p, [k]: v }));
+
+  // ── Address Autocomplete ──
+  const lookupClimateRef = useRef(null);
+  const onAddrPick = useCallback((addr) => {
+    setTimeout(() => lookupClimateRef.current({ ...pj, ...addr }), 0);
+  }, [pj]);
+  const { addrQ, addrSug, addrOpen, addrLoading, addrRect, addrHi, addrRef, addrInpRef, searchAddr, pickAddr, setAddrOpen, updateRect, addrKey } = useAddress(sPj, setGeo, climRan, onAddrPick);
+
+  // ── Derived ──
+  const md = MODS.find(x => x.id === pj.mi), iv = INVS.find(x => x.id === pj.ii);
+
+  // ── Wire Run Lengths ──
+  const [wr, sWr] = useState({ pv: 0, dc: 0, ac: 0, se: 0, gec: 0 });
+  const uWr = (k, v) => sWr(p => ({ ...p, [k]: +v || 0 }));
+
+  // ── Design State ──
+  const [dsg, sDsg] = useState(null), [pk, sPk] = useState([]);
+  const [ms, sMs] = useState([]), [ci, sCi] = useState(""), [cb, sCb] = useState(false);
+  const [pnl, sPnl] = useState([]), [mkr, sMkr] = useState([]), [tl2, sTl] = useState("select"), [as2, sAs] = useState(0), [em, sEm] = useState(null);
+  const [pht, sPht] = useState([]), [ap, sAp] = useState(null);
+  const [dAn, sDan] = useState({ mk: [], ln: [] });
+  const [logo, setLogo] = useState(DEFAULT_LOGO);
+  const logoRef = useRef(null);
+  const printRef = useRef(null);
+  const [climBusy, setClimBusy] = useState(false), [climMsg, setClimMsg] = useState("");
+  const [invRec, setInvRec] = useState("");
+
+  // ── Module Groups ──
+  const [roofType, setRoofType] = useState("gable");
+  const [modGroups, setModGroups] = useState([{ id: 1, nm: "South Face", az: "180", ori: "L", cnt: "", rp: "", fw: "30", fd: "18" }]);
+  const addGroup = () => setModGroups(g => [...g, { id: Date.now(), nm: `Face ${g.length + 1}`, az: "180", ori: "L", cnt: "", rp: "", fw: "30", fd: "18" }]);
+  const updGroup = (id, k, v) => setModGroups(g => g.map(x => x.id === id ? { ...x, [k]: v } : x));
+  const delGroup = (id) => setModGroups(g => g.length > 1 ? g.filter(x => x.id !== id) : g);
+  const totalMods = modGroups.reduce((s, g) => s + (+g.cnt || 0), 0);
+  const totalKw = md ? (totalMods * md.w / 1000) : 0;
+
+  // ── Layout State ──
+  const [layPos, setLayPos] = useState({});
+  const [layDrag, setLayDrag] = useState(null);
+  const [laySel, setLaySel] = useState(null);
+  const LAY_W = 840, SNAP = 8, GAP = 2;
+  const SETBACK_FT = 3;
+
+  const faceScale = (fw) => LAY_W / ((+fw || 30) * 12 * 25.4);
+  const faceSz = (ori, fw) => {
+    if (!md) return { w: 46, h: 30 };
+    const lm = md.lm || 1722, wm = md.wm || 1134;
+    const sc = faceScale(fw);
+    return ori === "L" ? { w: Math.max(8, Math.round(lm * sc)), h: Math.max(6, Math.round(wm * sc)) } : { w: Math.max(6, Math.round(wm * sc)), h: Math.max(8, Math.round(lm * sc)) };
+  };
+  const modSz = (ori) => {
+    if (!md) return { w: 46, h: 30 };
+    const lm = md.lm || 1722, wm = md.wm || 1134;
+    const sc = 30 / 1000;
+    return ori === "L" ? { w: Math.round(lm * sc), h: Math.round(wm * sc) } : { w: Math.round(wm * sc), h: Math.round(lm * sc) };
+  };
+
+  // ── Layout position sync ──
+  useEffect(() => {
+    if (!md) return;
+    setLayPos(prev => {
+      const next = { ...prev };
+      modGroups.forEach(g => {
+        const cnt = +g.cnt || 0;
+        if (cnt === 0) { delete next[g.id]; return; }
+        const old = prev[g.id] || [];
+        if (old.length === cnt) return;
+        const sz = faceSz(g.ori, g.fw);
+        const sc = faceScale(g.fw);
+        const sb = SETBACK_FT * 12 * 25.4 * sc;
+        const usableW = LAY_W - 2 * sb;
+        const cols = Math.max(1, Math.floor((usableW + GAP) / (sz.w + GAP)));
+        const arr = [];
+        for (let i = 0; i < cnt; i++) {
+          if (i < old.length) { arr.push(old[i]); }
+          else {
+            const r = Math.floor(i / cols), c = i % cols;
+            arr.push({ id: i, x: sb + c * (sz.w + GAP), y: sb + r * (sz.h + GAP) });
+          }
+        }
+        next[g.id] = arr.slice(0, cnt);
+      });
+      Object.keys(next).forEach(k => { if (!modGroups.find(g => g.id === +k || g.id === k)) delete next[k]; });
+      return next;
+    });
+  }, [modGroups, md]);
+
+  const snapPos = (gid, idx, rawX, rawY, ori, fw) => {
+    const mods = layPos[gid] || [];
+    const sz = fw ? faceSz(ori, fw) : modSz(ori);
+    let bx = rawX, by = rawY;
+    const edges = { xs: [], ys: [] };
+    mods.forEach((m, i) => {
+      if (i === idx) return;
+      const ms = sz;
+      edges.xs.push(m.x, m.x + ms.w, m.x - sz.w - GAP, m.x + ms.w + GAP);
+      edges.ys.push(m.y, m.y + ms.h, m.y - sz.h - GAP, m.y + ms.h + GAP);
+    });
+    let bestDx = SNAP + 1;
+    for (const ex of edges.xs) { const d = Math.abs(rawX - ex); if (d < bestDx) { bestDx = d; bx = ex; } }
+    let bestDy = SNAP + 1;
+    for (const ey of edges.ys) { const d = Math.abs(rawY - ey); if (d < bestDy) { bestDy = d; by = ey; } }
+    return { x: Math.max(0, bx), y: Math.max(0, by) };
+  };
+
+  const updateModPos = (gid, idx, x, y) => {
+    setLayPos(prev => ({ ...prev, [gid]: (prev[gid] || []).map((m, i) => i === idx ? { ...m, x, y } : m) }));
+  };
+
+  const resetGroupLayout = (gid) => {
+    const g = modGroups.find(x => x.id === gid);
+    if (!g || !md) return;
+    const cnt = +g.cnt || 0;
+    const sz = faceSz(g.ori, g.fw);
+    const sc = faceScale(g.fw);
+    const sb = SETBACK_FT * 12 * 25.4 * sc;
+    const usableW = LAY_W - 2 * sb;
+    const cols = Math.max(1, Math.floor((usableW + GAP) / (sz.w + GAP)));
+    const arr = [];
+    for (let i = 0; i < cnt; i++) {
+      const r = Math.floor(i / cols), c = i % cols;
+      arr.push({ id: i, x: sb + c * (sz.w + GAP), y: sb + r * (sz.h + GAP) });
+    }
+    setLayPos(prev => ({ ...prev, [gid]: arr }));
+  };
+
+  const addModToFace = (gid, clickX, clickY) => {
+    const g = modGroups.find(x => x.id === gid);
+    if (!g || !md) return;
+    const nc = (+g.cnt || 0) + 1;
+    const sz = faceSz(g.ori, g.fw);
+    const sc = faceScale(g.fw);
+    const sb = SETBACK_FT * 12 * 25.4 * sc;
+    let mx = clickX - sz.w / 2, my = clickY - sz.h / 2;
+    mx = Math.max(sb, Math.min(mx, LAY_W - sb - sz.w));
+    const canH = (+g.fd || 18) * 12 * 25.4 * sc;
+    my = Math.max(sb, Math.min(my, canH - sb - sz.h));
+    const snapped = snapPos(gid, nc - 1, mx, my, g.ori);
+    updGroup(gid, "cnt", String(nc));
+    setLayPos(prev => {
+      const arr = [...(prev[gid] || []), { id: nc - 1, x: snapped.x, y: snapped.y }];
+      return { ...prev, [gid]: arr };
+    });
+  };
+
+  const removeSelMod = () => {
+    if (!laySel) return;
+    const { gid, idx } = laySel;
+    const g = modGroups.find(x => x.id === gid);
+    if (!g) return;
+    const nc = Math.max(0, (+g.cnt || 0) - 1);
+    updGroup(gid, "cnt", String(nc));
+    setLayPos(prev => {
+      const arr = [...(prev[gid] || [])];
+      arr.splice(idx, 1);
+      return { ...prev, [gid]: arr };
+    });
+    setLaySel(null);
+  };
+
+  const autoFillFace = (gid) => {
+    const g = modGroups.find(x => x.id === gid);
+    if (!g || !md) return;
+    const sc = faceScale(g.fw);
+    const sb = SETBACK_FT * 12 * 25.4 * sc;
+    const canW = LAY_W, canH = (+g.fd || 18) * 12 * 25.4 * sc;
+    const sz = faceSz(g.ori, g.fw);
+    const usableW = canW - 2 * sb, usableH = canH - 2 * sb;
+    const gapPx = Math.max(1, Math.round(GAP));
+    const cols = Math.max(1, Math.floor((usableW + gapPx) / (sz.w + gapPx)));
+    const rows = Math.max(1, Math.floor((usableH + gapPx) / (sz.h + gapPx)));
+    const cnt = cols * rows;
+    if (cnt <= 0) return;
+    updGroup(gid, "cnt", String(cnt));
+    const arr = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      arr.push({ id: r * cols + c, x: sb + c * (sz.w + gapPx), y: sb + r * (sz.h + gapPx) });
+    }
+    setLayPos(prev => ({ ...prev, [gid]: arr }));
+  };
+
+  const applyRoofPreset = (type) => {
+    setRoofType(type);
+    const base = { ori: "L", cnt: "", rp: "", fw: "30", fd: "18" };
+    const presets = {
+      gable: [{ ...base, nm: "South Face", az: "180" }, { ...base, nm: "North Face", az: "0" }],
+      hip: [{ ...base, nm: "South Face", az: "180", fw: "30", fd: "14" }, { ...base, nm: "North Face", az: "0", fw: "30", fd: "14" },
+        { ...base, nm: "East Face", az: "90", fw: "16", fd: "14" }, { ...base, nm: "West Face", az: "270", fw: "16", fd: "14" }],
+      flat: [{ ...base, nm: "Flat Roof", az: "180", fw: "60", fd: "40", rp: "0" }],
+      shed: [{ ...base, nm: "Shed Roof", az: "180", fw: "30", fd: "20" }],
+      ground: [{ ...base, nm: "Ground Array", az: "180", fw: "40", fd: "30", rp: "20" }],
+    };
+    const faces = (presets[type] || presets.gable).map((f, i) => ({ ...f, id: Date.now() + i }));
+    setModGroups(faces);
+    setLayPos({});
+    setLaySel(null);
+  };
+
+  // ── String sizing ──
+  const cr = useRef(null);
+  const sz = strCalc(md, iv, pj.tl, pj.th, pj.mt);
+
+  // ── Effects ──
+  useEffect(() => { if (dsg && md && iv) { sPk(mkPack(md, iv, dsg, sz, wr, pj.es, pht)); } }, [dsg, md, iv, sz, wr, pj.es, pht]);
+  useEffect(() => { cr.current?.scrollIntoView({ behavior: "smooth" }); }, [ms]);
+  useEffect(() => {
+    const h = e => { if ((e.key === "Delete" || e.key === "Backspace") && laySel && tab === "layout") { e.preventDefault(); removeSelMod(); } };
+    window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
+  }, [laySel, tab]);
+
+  // ── Auto-recommend inverter when module + kW are set ──
+  useEffect(() => {
+    if (md && pj.kw > 0 && totalKw > 0 && !iv) recommendInverter();
+  }, [pj.mi, pj.kw, totalMods]);
+
+  // ── Climate Lookup ──
+  lookupClimateRef.current = async (pjSnap) => {
+    const snap = pjSnap || pj;
+    const addr = [snap.ad, snap.ct, snap.st, snap.zp].filter(Boolean).join(", ");
+    if (!addr || addr.length < 5) { setClimMsg("Enter an address first"); return; }
+    setClimBusy(true); setClimMsg("⏳ Geocoding...");
+    try {
+      let coords = geo;
+      if (!coords) {
+        coords = await geocodeAddr(snap);
+        if (!coords) throw new Error("Could not geocode address");
+        setGeo(coords);
+      }
+      setClimMsg("⏳ Fetching climate data...");
+      const result = await lookupClimateData(snap, coords);
+      if (result.tl != null) u("tl", result.tl);
+      if (result.th != null) u("th", result.th);
+      if (result.ir != null) u("ir", result.ir);
+      if (result.ps != null) u("ps", result.ps);
+      setClimMsg(result.msg);
+    } catch (e) { setClimMsg("✕ " + e.message); }
+    setClimBusy(false);
+  };
+  const lookupClimate = () => lookupClimateRef.current();
+
+  // ── Auto-lookup climate ──
+  useEffect(() => {
+    if (climRan.current) return;
+    const hasAddr = (pj.ct || "").trim().length >= 2 && (pj.st || "").trim().length >= 2;
+    const hasClim = pj.tl && pj.th && pj.ir;
+    if (hasAddr && !hasClim && !climBusy) {
+      climRan.current = true;
+      lookupClimateRef.current(pj);
+    }
+  }, [pj.ad, pj.ct, pj.st, pj.zp, pj.tl, pj.th, pj.ir, climBusy]);
+
+  // ── Inverter Recommendation ──
+  const recommendInverter = () => {
+    const kwTarget = parseFloat(pj.kw);
+    if (!kwTarget) { setInvRec("⚠ Enter target kW first"); return; }
+    if (!md) { setInvRec("⚠ Select a module first"); return; }
+    const arrayW = kwTarget * 1000;
+    const nMods = Math.ceil(arrayW / md.w);
+    const options = [];
+    for (const inv of INVS) {
+      if (inv.tp === "micro") {
+        if (md.w <= inv.kw * 1000 * 1.3 && md.voc <= inv.dv && md.vmp >= inv.ml) {
+          const ratio = md.w / (inv.kw * 1000);
+          const cost = nMods * inv.$;
+          options.push({ inv, count: nMods, ratio, cost, note: `1 per module, ${nMods}× ${inv.nm}` });
+        }
+        continue;
+      }
+      if (inv.tp === "optimizer") {
+        for (let count = 1; count <= 2; count++) {
+          const totalInvW = inv.kw * 1000 * count;
+          const ratio = arrayW / totalInvW;
+          if (ratio < 0.75 || ratio > 1.40) continue;
+          const cost = count * inv.$ + nMods * 70;
+          options.push({ inv, count, ratio, cost, note: `${count}× ${inv.nm} + ${nMods} P505 optimizers` });
+        }
+        continue;
+      }
+      for (let count = 1; count <= 4; count++) {
+        const totalInvW = inv.kw * 1000 * count;
+        const ratio = arrayW / totalInvW;
+        if (ratio < 0.75 || ratio > 1.40) continue;
+        if (pj.tl) {
+          const s = strCalc(md, inv, pj.tl, pj.th, pj.mt);
+          if (!s || s.opt < s.mn) continue;
+          const maxMods = s.opt * count * 2;
+          if (maxMods < nMods * 0.8) continue;
+        }
+        const cost = count * inv.$;
+        options.push({ inv, count, ratio, cost, note: `${count}× ${inv.nm}` });
+      }
+    }
+    if (options.length === 0) { setInvRec("⚠ No compatible inverter found — try different module or kW"); return; }
+    options.sort((a, b) => {
+      const idealA = Math.abs(a.ratio - 1.15), idealB = Math.abs(b.ratio - 1.15);
+      const scoreA = idealA * 1000 + a.cost * 0.1 + a.count * 50;
+      const scoreB = idealB * 1000 + b.cost * 0.1 + b.count * 50;
+      return scoreA - scoreB;
+    });
+    const best = options[0];
+    u("ii", best.inv.id);
+    const ratioStr = best.ratio.toFixed(2);
+    setInvRec(`✓ ${best.note} — DC:AC ${ratioStr}, $${best.cost.toLocaleString()}`);
+  };
+
+  // ── AI Chat ──
+  const chat = async (t) => {
+    if (!t.trim()) return;
+    const nm = [...ms, { r: "user", t }]; sMs(nm); sCi(""); sCb(true);
+    const sp = `You are a NABCEP-certified solar PV designer. Follow NEC Article 690.
+
+PROJECT: ${pj.nm} | ${pj.ad} ${pj.ct}, ${pj.st} ${pj.zp} | ${pj.kw}kW ${pj.mt} mount (${pj.rf})
+ROOF: Pitch ${pj.rp ? pj.rp + "°" : "not set"} | Service: ${pj.es}A
+MODULE GROUPS: ${modGroups.map((g, i) => `${g.nm}: ${g.cnt || 0} modules @ ${g.az}° ${g.ori === "L" ? "landscape" : "portrait"}${g.rp ? ` ${g.rp}° pitch` : ""}`).join(" | ")}
+TOTAL: ${totalMods} modules = ${totalKw.toFixed(2)} kW
+CLIMATE: ASHRAE min ${pj.tl || "(loading)"}°C / ASHRAE 2% max ${pj.th || "(loading)"}°C | Irr: ${pj.ir || "(loading)"} kWh/m²/day | PSH: ${pj.ps || "(loading)"}
+Module: ${md ? md.nm + " " + md.w + "W" : "Not selected"} | Inverter: ${iv ? iv.nm + " " + iv.kw + "kW" : "Not selected"}
+Site notes: ${pj.ds || "—"} | Prefs: ${pj.eq || "—"}
+${sz ? `STRING SIZING: Optimal=${sz.opt} mod/str (range ${sz.mn}-${Math.min(sz.mx, sz.mxM)}). Max Vsys=${sz.sv}V (limit ${iv?.dv}V). DC: ${sz.dc}AWG, OCPD ${sz.oc}A.` : "Need module+inverter+temps for sizing."}
+${dsg ? `DESIGN: ${JSON.stringify(dsg)}` : "No design yet."}
+
+INVENTORY MODULES: ${MODS.map(m => m.nm + " " + m.w + "W $" + m.$).join(" | ")}
+INVENTORY INVERTERS: ${INVS.map(i => i.nm + " " + i.kw + "kW $" + i.$ + " (" + i.tp + ")").join(" | ")}
+
+RULES:
+1. NEVER ask for ASHRAE temps, irradiance, PSH, roof pitch, azimuth, or electrical service — these are all provided above. If climate shows "(loading)", tell user to wait or click Re-Lookup on Project tab.
+2. Use the electrical service amperage for NEC 705.12 120% rule busbar calculations.
+3. Use roof pitch and azimuth for production estimates and tilt factor derating.
+4. When ready, generate design with JSON in \`\`\`json\`\`\` block:
+{"type":"design","tm":totalModules,"ms":modulesPerString,"ns":stringsCount,"ni":inverterCount,"ratio":dcToAcRatio,"kwh":annualKwh,"cost":totalMaterialCost,"markers":[{"label":"","details":"","category":"array|inverter|disconnect|panel|conduit|junction|grounding|meter|note"}],"steps":["installation step"],"notes":["design note"]}
+5. Explain NEC reasoning (690.7, 690.8, 705.12 etc). Consider least cost.
+6. For markers: include array, inverter, DC disconnect, AC disconnect, conduit runs, J-boxes, grounding, meter, main panel.`;
+    try {
+      const txt = await callClaude({ system: sp, messages: nm.slice(-10).map(m => ({ role: m.r, content: m.t })), max_tokens: 4000 });
+      const jm = txt.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jm) {
+        try {
+          const dd = JSON.parse(jm[1]);
+          if (dd.type === "design") {
+            sDsg(dd);
+            if (dd.markers?.length) sMkr(p => [...p, ...dd.markers.map((mk, i) => ({ id: `a${Date.now()}${i}`, x: 50 + (i % 5) * 155, y: 70 + Math.floor(i / 5) * 95, ...mk }))]);
+          }
+        } catch (e) { }
+      }
+      sMs(p => [...p, { r: "assistant", t: txt }]);
+    } catch (e) { sMs(p => [...p, { r: "assistant", t: "Error: " + e.message }]); }
+    sCb(false);
+  };
+
+  // ── Render ──
+  return (
+    <div style={{ fontFamily: fs, background: bg, color: tx, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <Header logo={logo} pj={pj} dsg={dsg} />
+      <TabBar tab={tab} setTab={setTab} />
+
+      <div style={{ flex: 1, overflow: "auto", padding: 16 }}>
+        {tab === "project" && <ProjectTab
+          pj={pj} u={u} md={md} iv={iv} sz={sz} totalMods={totalMods} totalKw={totalKw}
+          modGroups={modGroups} addGroup={addGroup} updGroup={updGroup} delGroup={delGroup}
+          climBusy={climBusy} climMsg={climMsg} lookupClimate={lookupClimate} climRan={climRan}
+          invRec={invRec} setInvRec={setInvRec} recommendInverter={recommendInverter}
+          setTab={setTab} chat={chat}
+          addrQ={addrQ} addrSug={addrSug} addrOpen={addrOpen} addrLoading={addrLoading} addrRect={addrRect} addrHi={addrHi}
+          addrRef={addrRef} addrInpRef={addrInpRef} searchAddr={searchAddr} pickAddr={pickAddr}
+          setAddrOpen={setAddrOpen} updateRect={updateRect} addrKey={addrKey}
+        />}
+
+        {tab === "ai" && <AiDesignTab ms={ms} ci={ci} sCi={sCi} cb={cb} chat={chat} cr={cr} />}
+
+        {tab === "electrical" && <ElectricalTab md={md} iv={iv} sz={sz} dsg={dsg} climBusy={climBusy} lookupClimate={lookupClimate} climRan={climRan} pj={pj} />}
+
+        {tab === "layout" && <>
+          <LayoutTab
+            md={md} iv={iv} pj={pj} totalMods={totalMods} totalKw={totalKw}
+            modGroups={modGroups} roofType={roofType} applyRoofPreset={applyRoofPreset}
+            addGroup={addGroup} updGroup={updGroup} delGroup={delGroup}
+            layPos={layPos} layDrag={layDrag} setLayDrag={setLayDrag}
+            laySel={laySel} setLaySel={setLaySel}
+            autoFillFace={autoFillFace} resetGroupLayout={resetGroupLayout}
+            removeSelMod={removeSelMod} addModToFace={addModToFace}
+            snapPos={snapPos} updateModPos={updateModPos}
+            faceScale={faceScale} faceSz={faceSz}
+            SETBACK_FT={SETBACK_FT} LAY_W={LAY_W} GAP={GAP}
+          />
+          <SiteElectricalTab pj={pj} sz={sz} iv={iv} dsg={dsg} dAn={dAn} sDan={sDan} />
+        </>}
+
+        {tab === "plans" && <PlansTab
+          md={md} iv={iv} sz={sz} pj={pj} dsg={dsg}
+          totalMods={totalMods} totalKw={totalKw} modGroups={modGroups}
+          logo={logo} setLogo={setLogo} logoRef={logoRef} printRef={printRef}
+          modSz={modSz} faceSz={faceSz} layPos={layPos}
+        />}
+
+        {tab === "photos" && <PhotosTab pht={pht} sPht={sPht} ap={ap} sAp={sAp} sz={sz} pj={pj} iv={iv} dsg={dsg} />}
+
+        {tab === "packlist" && <PackListTab pk={pk} dsg={dsg} md={md} iv={iv} sz={sz} pj={pj} sDsg={sDsg} mkr={mkr} />}
+      </div>
+    </div>
+  );
+}
