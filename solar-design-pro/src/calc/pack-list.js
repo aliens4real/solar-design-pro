@@ -6,29 +6,32 @@ const SZ_ASCII = { '½"': '1/2"', '¾"': '3/4"', '1"': '1"', '1¼"': '1-1/4"', '
 
 // Unit prices per conduit size for each accessory type (from Canopy inventory)
 const COND_ACC = {
-  '1/2"':   { stick: 7.00, coupling: 0.30, connector: 0.33, bushing: 0.18, strap: 0.15, lb: 2.50 },
-  '3/4"':   { stick: 8.50, coupling: 0.36, connector: 0.39, bushing: 0.21, strap: 0.18, lb: 2.91 },
-  '1"':     { stick: 12.00, coupling: 0.55, connector: 0.58, bushing: 0.30, strap: 0.25, lb: 4.50 },
-  '1-1/4"': { stick: 16.50, coupling: 0.80, connector: 0.85, bushing: 0.42, strap: 0.35, lb: 6.00 },
-  '1-1/2"': { stick: 20.00, coupling: 1.00, connector: 1.10, bushing: 0.50, strap: 0.42, lb: 7.50 },
-  '2"':     { stick: 26.00, coupling: 1.30, connector: 1.40, bushing: 0.65, strap: 0.55, lb: 10.00 },
+  '1/2"':   { stick: 7.00, coupling: 0.30, connector: 0.33, locknut: 0.12, bushing: 0.18, strap: 0.15, lb: 2.50 },
+  '3/4"':   { stick: 8.50, coupling: 0.36, connector: 0.39, locknut: 0.14, bushing: 0.21, strap: 0.18, lb: 2.91 },
+  '1"':     { stick: 12.00, coupling: 0.55, connector: 0.58, locknut: 0.18, bushing: 0.30, strap: 0.25, lb: 4.50 },
+  '1-1/4"': { stick: 16.50, coupling: 0.80, connector: 0.85, locknut: 0.25, bushing: 0.42, strap: 0.35, lb: 6.00 },
+  '1-1/2"': { stick: 20.00, coupling: 1.00, connector: 1.10, locknut: 0.30, bushing: 0.50, strap: 0.42, lb: 7.50 },
+  '2"':     { stick: 26.00, coupling: 1.30, connector: 1.40, locknut: 0.40, bushing: 0.65, strap: 0.55, lb: 10.00 },
 };
 
-// Emit all 6 conduit accessory line items for a conduit run
-function addConduitRun(a, szRaw, runLen, label) {
+// Emit conduit accessory line items for a conduit run
+// endpoints: number of enclosure entries (default 2; AC runs through disconnect = 4)
+function addConduitRun(a, szRaw, runLen, label, endpoints) {
   const sz = SZ_ASCII[szRaw] || szRaw.replace(/[""\u201d]/g, '"');
   const p = COND_ACC[sz] || COND_ACC['3/4"'];
   const lbl = label ? ` (${label})` : '';
+  const ep = endpoints || 2;
   const sticks = Math.ceil(runLen / 10);
   const couplings = Math.max(0, sticks - 1);
-  const straps = Math.ceil(runLen / 10) + 1;
-  const lbs = Math.ceil(runLen / 25);
+  const straps = Math.ceil(runLen / 10) + 1;   // NEC 358.30: within 3ft of box + every 10ft
+  const lbs = Math.max(1, Math.ceil(runLen / 25)); // at least 1 direction change per run
 
   a('Conduit', `${sz} EMT 10ft${lbl}`,              sticks,    'ea', p.stick);
   a('Conduit', `${sz} EMT Set Screw Coupling${lbl}`, couplings, 'ea', p.coupling);
-  a('Conduit', `${sz} EMT Set Screw Connector${lbl}`, 2,        'ea', p.connector);
-  a('Conduit', `${sz} EMT Insulating Bushing${lbl}`,  2,        'ea', p.bushing);
-  a('Conduit', `${sz} EMT Strap${lbl}`,              straps,    'ea', p.strap);
+  a('Conduit', `${sz} EMT Set Screw Connector${lbl}`, ep,       'ea', p.connector);
+  a('Conduit', `${sz} Locknut${lbl}`,                ep,        'ea', p.locknut);
+  a('Conduit', `${sz} Insulating Bushing${lbl}`,     ep,        'ea', p.bushing);
+  a('Conduit', `${sz} One-Hole Strap${lbl}`,         straps,    'ea', p.strap);
   a('Conduit', `${sz} LB Fitting${lbl}`,             lbs,       'ea', p.lb);
 }
 
@@ -97,7 +100,7 @@ export function mkPack(m, iv, d, sz, wr, es, pht) {
       a("Wiring", `#${egc} Cu EGC Grn (AC)`, ft, "ft", 0.35);
       if (w.ac > 0) {
         const c = calcConduit([{ n: ph, g: sz.ac, t: "THWN-2" }, { n: 1, g: sz.ac, t: "N" }, { n: 1, g: egc, t: "EGC" }]);
-        addConduitRun(a, c.conduit, w.ac, "AC");
+        addConduitRun(a, c.conduit, w.ac, "AC", 4); // inverter + disconnect (in/out) + panel
       }
     }
 
@@ -143,11 +146,15 @@ export function mkPack(m, iv, d, sz, wr, es, pht) {
 
   a("OCPD", "Breaker " + (sz?.oc || d.aoc || 40) + "A 2p", 1, "ea", 24.65);
   if (!mi) a("Disconnect", "DC Disconnect 600V", 1, "ea", 51);
-  a("Ground", "5/8\"x8' CU Rod", 1, "ea", 18.5);
-  a("Ground", "Acorn Clamp", 2, "ea", 2.79);
+  a("Ground", "5/8\"x8' CU Ground Rod", 2, "ea", 18.5);   // NEC 250.53(A)(2)
+  a("Ground", "Acorn Ground Rod Clamp", 2, "ea", 2.79);    // 1 per rod
+  a("Ground", "Grounding Bus Bar", 1, "ea", 8.50);
+  a("Ground", "Bonding Bushing + Jumper", 1, "ea", 4.25);  // NEC 250.92(B) SE raceway
+  a("Ground", "Intersystem Bonding Term.", 1, "ea", 12.00); // NEC 250.94
   a("BOS", "MC4 Pairs", n + 4, "pr", 2.5);
   a("BOS", "JBox PVC 8x8x4", 1, "ea", 12.5);
   a("BOS", "NEC 690 Label Set", 1, "set", 25);
   a("BOS", "Tap Box Kit", 1, "ea", 85);
+  a("BOS", "Wire Pulling Lubricant", 1, "ea", 8.50);
   return L;
 }
