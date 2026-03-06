@@ -197,8 +197,11 @@ export default function AnnotationOverlay({
           <g key={ln.id}>
             {mode === MODE.SELECT && (
               <path d={route.d} fill="none" stroke="transparent" strokeWidth={14}
-                style={{ pointerEvents: "all", cursor: "pointer" }}
-                onMouseDown={e => { e.preventDefault(); e.stopPropagation(); setSelLn(ln.id); }} />
+                style={{ pointerEvents: "all", cursor: "move" }}
+                onMouseDown={e => { e.preventDefault(); e.stopPropagation(); setSelLn(ln.id);
+                  setDrag({ id: ln.id, type: "corner", axis: route.exitH ? "h" : "v" }); }}
+                onTouchStart={e => { e.preventDefault(); e.stopPropagation(); setSelLn(ln.id);
+                  setDrag({ id: ln.id, type: "corner", axis: route.exitH ? "h" : "v" }); }} />
             )}
             <path d={route.d} fill="none" stroke={isSel ? "#0891b2" : "#06b6d4"} strokeWidth={isSel ? 4 : 3} strokeDasharray="10 5" strokeLinecap="round" opacity={isSel ? 1 : 0.9} />
             <LineLabel x={pos.x} y={pos.y} ln={ln} />
