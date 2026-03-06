@@ -68,18 +68,63 @@ export function MarkerIcon({ mk, idx, mcat, onDown, onResize, selected, modGroup
   );
 }
 
-export function LineLabel({ mid, ln }) {
-  const parts = [];
-  if (ln.wire) parts.push(`#${ln.wire} ${ln.wireType || ""}`);
-  if (ln.conduit && ln.conduit !== "None/Open") parts.push(ln.conduit);
-  if (ln.len > 0) parts.push(`${ln.len} ft`);
-  if (ln.label) parts.push(ln.label);
-  const txt = parts.join(" · ") || "conduit run";
-  const tw = txt.length * 5.5 + 12;
+const LBL_FS = 7, LBL_LH = 9, LBL_PAD = 3;
+
+export function labelLines(ln) {
+  const rows = [];
+  if (ln.label) rows.push(ln.label);
+  if (ln.wire) rows.push(`#${ln.wire} ${ln.wireType || ""}`);
+  if (ln.conduit && ln.conduit !== "None/Open") rows.push(ln.conduit);
+  if (ln.len > 0) rows.push(`${ln.len} ft`);
+  if (rows.length === 0) rows.push("conduit run");
+  return rows;
+}
+
+export function labelDims(ln) {
+  const rows = labelLines(ln);
+  const w = Math.max(...rows.map(l => l.length * 4)) + LBL_PAD * 2;
+  const h = rows.length * LBL_LH + LBL_PAD * 2;
+  return { w, h, rows };
+}
+
+export function resolveOverlaps(labels) {
+  if (labels.length < 2) return new Map(labels.map(l => [l.id, { x: l.x, y: l.y }]));
+  const res = labels.map(l => ({ ...l }));
+  for (let pass = 0; pass < 8; pass++) {
+    let moved = false;
+    for (let i = 0; i < res.length; i++) {
+      for (let j = i + 1; j < res.length; j++) {
+        const a = res[i], b = res[j];
+        const ox = (a.w / 2 + b.w / 2 + 2) - Math.abs(a.x - b.x);
+        const oy = (a.h / 2 + b.h / 2 + 2) - Math.abs(a.y - b.y);
+        if (ox > 0 && oy > 0) {
+          // Push apart along the axis with less overlap
+          if (oy < ox) {
+            const push = oy / 2 + 1;
+            if (a.y <= b.y) { a.y -= push; b.y += push; } else { a.y += push; b.y -= push; }
+          } else {
+            const push = ox / 2 + 1;
+            if (a.x <= b.x) { a.x -= push; b.x += push; } else { a.x += push; b.x -= push; }
+          }
+          moved = true;
+        }
+      }
+    }
+    if (!moved) break;
+  }
+  return new Map(res.map(l => [l.id, { x: l.x, y: l.y }]));
+}
+
+export function LineLabel({ x, y, ln }) {
+  const { w, h, rows } = labelDims(ln);
   return (
     <g>
-      <rect x={mid.x - tw / 2} y={mid.y - 8} width={tw} height={16} rx={3} fill="#ffffffdd" stroke="#06b6d4" strokeWidth={1} />
-      <text x={mid.x} y={mid.y + 3.5} textAnchor="middle" fill="#06b6d4" fontSize={9} fontFamily={ff} fontWeight="600">{txt}</text>
+      <rect x={x - w / 2} y={y - h / 2} width={w} height={h} rx={3} fill="#ffffffdd" stroke="#06b6d4" strokeWidth={0.7} />
+      {rows.map((r, i) => (
+        <text key={i} x={x} y={y - h / 2 + LBL_PAD + LBL_LH * (i + 0.75)}
+          textAnchor="middle" fill="#06b6d4" fontSize={LBL_FS} fontFamily={ff}
+          fontWeight={i === 0 ? "700" : "500"}>{r}</text>
+      ))}
     </g>
   );
 }

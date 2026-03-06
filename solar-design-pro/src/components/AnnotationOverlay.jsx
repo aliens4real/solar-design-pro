@@ -5,7 +5,7 @@ import {
   MODE, DEF_W, DEF_H, DEF_BEND, WIRE_OPTS, WIRE_TYPES, CONDUIT_OPTS,
   nearestEdge, hvRoute, hvSiteRoute, parallelOffset, specFromRun,
 } from '../calc/annotation-geo.js';
-import { McatBtn, MarkerIcon, LineLabel, BreakSymbol } from './AnnotationParts.jsx';
+import { McatBtn, MarkerIcon, LineLabel, BreakSymbol, labelDims, resolveOverlaps } from './AnnotationParts.jsx';
 
 // AnnotationOverlay — shared annotation system for photos and SVG diagrams
 //
@@ -161,15 +161,37 @@ export default function AnnotationOverlay({
   });
   const sSel = { ...inp, fontSize: 10, padding: "4px 6px" };
 
+  // ── Pre-compute routes ──
+  const routeMap = new Map();
+  normalLines.forEach(ln => {
+    const a = markers.find(m => m.id === ln.from), b = markers.find(m => m.id === ln.to);
+    if (!a || !b) return;
+    routeMap.set(ln.id, hvRoute(a, b, ln, parallelOffset(ln, lines)));
+  });
+  siteLines.forEach(ln => {
+    const a = markers.find(m => m.id === ln.from);
+    if (!a) return;
+    routeMap.set(ln.id, hvSiteRoute(a, { x: ln.ex, y: ln.ey }, ln, parallelOffset(ln, lines)));
+  });
+
+  // ── Resolve label overlaps ──
+  const lblArr = [];
+  routeMap.forEach((route, lnId) => {
+    const ln = lines.find(l => l.id === lnId);
+    if (!ln) return;
+    const { w, h } = labelDims(ln);
+    lblArr.push({ id: lnId, x: route.mid.x, y: route.mid.y, w, h });
+  });
+  const labelPos = resolveOverlaps(lblArr);
+
   // ═══ SVG Layers ═══
   const svgContent = (
     <>
       {/* ── Layer 1: Conduit run paths + labels ── */}
       {[...normalLines].sort((a, b) => (a.id === selLn ? 1 : 0) - (b.id === selLn ? 1 : 0)).map(ln => {
-        const a = markers.find(m => m.id === ln.from), b = markers.find(m => m.id === ln.to);
-        if (!a || !b) return null;
-        const off = parallelOffset(ln, lines);
-        const route = hvRoute(a, b, ln, off);
+        const route = routeMap.get(ln.id);
+        if (!route) return null;
+        const pos = labelPos.get(ln.id) || route.mid;
         const isSel = selLn === ln.id;
         return (
           <g key={ln.id}>
@@ -179,15 +201,13 @@ export default function AnnotationOverlay({
                 onMouseDown={e => { e.preventDefault(); e.stopPropagation(); setSelLn(ln.id); }} />
             )}
             <path d={route.d} fill="none" stroke={isSel ? "#0891b2" : "#06b6d4"} strokeWidth={isSel ? 4 : 3} strokeDasharray="10 5" strokeLinecap="round" opacity={isSel ? 1 : 0.9} />
-            <LineLabel mid={route.mid} ln={ln} />
+            <LineLabel x={pos.x} y={pos.y} ln={ln} />
           </g>);
       })}
       {siteLines.map(ln => {
-        const a = markers.find(m => m.id === ln.from);
-        if (!a) return null;
-        const end = { x: ln.ex, y: ln.ey };
-        const off = parallelOffset(ln, lines);
-        const route = hvSiteRoute(a, end, ln, off);
+        const route = routeMap.get(ln.id);
+        if (!route) return null;
+        const pos = labelPos.get(ln.id) || route.mid;
         const isSel = selLn === ln.id;
         return (
           <g key={ln.id}>
@@ -198,7 +218,7 @@ export default function AnnotationOverlay({
             )}
             <path d={route.d} fill="none" stroke={isSel ? "#0891b2" : "#06b6d4"} strokeWidth={isSel ? 4 : 3} strokeDasharray="10 5" strokeLinecap="round" opacity={isSel ? 1 : 0.9} />
             <BreakSymbol x={route.endPt.x} y={route.endPt.y} angle={route.angle} />
-            <LineLabel mid={route.mid} ln={ln} />
+            <LineLabel x={pos.x} y={pos.y} ln={ln} />
           </g>);
       })}
       {/* ── Layer 2: Markers ── */}
@@ -218,10 +238,8 @@ export default function AnnotationOverlay({
       })}
       {/* ── Layer 3: Conduit run handles ── */}
       {mode === MODE.SELECT && [...normalLines].sort((a, b) => (a.id === selLn ? 1 : 0) - (b.id === selLn ? 1 : 0)).map(ln => {
-        const a = markers.find(m => m.id === ln.from), b = markers.find(m => m.id === ln.to);
-        if (!a || !b) return null;
-        const off = parallelOffset(ln, lines);
-        const route = hvRoute(a, b, ln, off);
+        const route = routeMap.get(ln.id);
+        if (!route) return null;
         const isSel = selLn === ln.id;
         const cornerAxis = route.exitH ? "h" : "v";
         return (
@@ -246,11 +264,8 @@ export default function AnnotationOverlay({
           </g>);
       })}
       {mode === MODE.SELECT && siteLines.map(ln => {
-        const a = markers.find(m => m.id === ln.from);
-        if (!a) return null;
-        const end = { x: ln.ex, y: ln.ey };
-        const off = parallelOffset(ln, lines);
-        const route = hvSiteRoute(a, end, ln, off);
+        const route = routeMap.get(ln.id);
+        if (!route) return null;
         const isSel = selLn === ln.id;
         return (
           <g key={"h_" + ln.id}>
