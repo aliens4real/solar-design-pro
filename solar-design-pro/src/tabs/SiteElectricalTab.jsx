@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo, useEffect } from 'react';
+import { useRef, useCallback, useMemo, useEffect, useState } from 'react';
 import { ff, c1, c2, bd, ac, tx, td, cd } from '../theme.js';
 import { egcSize, gecSize, seSize } from '../calc/nec-sizing.js';
 import { calcConduit } from '../diagrams/shared.jsx';
@@ -47,6 +47,45 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroup
     seedRef.current = key;
   }, [mt, isComm]);
 
+  // ── Sync pv_array markers with modGroups (one marker per group) ──
+  const arrSyncRef = useRef(null);
+  useEffect(() => {
+    if (!modGroups || modGroups.length === 0) return;
+    const activeGroups = modGroups.filter(g => (+g.cnt || 0) > 0);
+    if (activeGroups.length === 0) return;
+    // Determine default positions based on mount type
+    const basePos = mt === "ground" ? { x: 200, y: 250 }
+      : mt === "carport" ? { x: 200, y: 185 }
+      : { x: 200, y: 180 }; // residential/commercial
+    const spacing = 120;
+
+    const key = activeGroups.map(g => g.id).join(",");
+    if (arrSyncRef.current === key) return;
+    arrSyncRef.current = key;
+
+    sDan(prev => {
+      const existing = (prev.mk || []).filter(m => m.ct === "pv_array");
+      const existingGids = new Set(existing.map(m => m.gid));
+      const activeGids = new Set(activeGroups.map(g => g.id));
+      // Remove markers for deleted groups
+      let newMk = (prev.mk || []).filter(m => m.ct !== "pv_array" || activeGids.has(m.gid));
+      // Remove lines referencing deleted pv_array markers
+      const removedIds = new Set(existing.filter(m => !activeGids.has(m.gid)).map(m => m.id));
+      let newLn = (prev.ln || []).filter(l => !removedIds.has(l.from) && !removedIds.has(l.to));
+      // Add markers for new groups
+      activeGroups.forEach((g, i) => {
+        if (!existingGids.has(g.id)) {
+          newMk.push({
+            id: "arr_" + g.id, x: basePos.x + i * spacing, y: basePos.y,
+            ct: "pv_array", lb: g.nm || "Array " + (i + 1), dt: "",
+            gid: g.id, w: 36, h: 36,
+          });
+        }
+      });
+      return { ...prev, mk: newMk, ln: newLn };
+    });
+  }, [modGroups, mt, sDan]);
+
   const SITE_RUNS = useMemo(() => [
     { key: "dcPV", label: "PV Source Circuit", spec: dcPV },
     ...(dcRun ? [{ key: "dcRun", label: "DC Homerun", spec: dcRun }] : []),
@@ -62,7 +101,7 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroup
     return { pv: 0, dc: find("_ln_dc"), ac: find("_ln_ac"), se: find("_ln_se"), gec: find("_ln_ge") };
   }, [dAn?.ln]);
 
-  const props = { svW, svH, es, isComm, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr: anWr, modGroups, layPos, md };
+  const props = { svW, svH, es, isComm, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr: anWr };
 
   // SVG coordinate adapter
   const getSvgPt = useCallback(e => {

@@ -1,6 +1,6 @@
 import { ff } from '../theme.js';
 import { DEF_W, DEF_H } from '../calc/annotation-geo.js';
-import { pvArrayGroup } from '../diagrams/shared.jsx';
+import { pvGroupIcon } from '../diagrams/shared.jsx';
 
 const HANDLE_SZ = 8;
 
@@ -23,8 +23,10 @@ export function MarkerIcon({ mk, idx, mcat, onDown, onResize, selected, modGroup
   const hw = mw / 2, hh = mh / 2;
   const iconSz = Math.round(Math.min(mw, mh) * 0.55), iconHalf = iconSz / 2;
 
-  // Special rendering for pv_array markers — show actual module layout
+  // Special rendering for pv_array markers — show per-group module layout
   const isPvArray = mk.ct === "pv_array";
+  const grp = isPvArray && mk.gid && modGroups ? modGroups.find(g => g.id === mk.gid) : null;
+  const grpPos = isPvArray && mk.gid && layPos ? layPos[mk.gid] : null;
   const arrW = isPvArray ? Math.max(mw, 140) : mw;
   const arrH = isPvArray ? Math.max(mh, 50) : mh;
   const ahw = arrW / 2, ahh = arrH / 2;
@@ -34,7 +36,7 @@ export function MarkerIcon({ mk, idx, mcat, onDown, onResize, selected, modGroup
       <g style={{ cursor: "grab" }} onMouseDown={onDown} onTouchStart={onDown}>
         {isPvArray ? (
           <g transform={`translate(${mk.x - ahw},${mk.y - ahh})`}>
-            {pvArrayGroup(modGroups, layPos, md, { maxW: arrW, maxH: arrH })}
+            {pvGroupIcon(grp, grpPos, md, { maxW: arrW, maxH: arrH })}
           </g>
         ) : (<>
           <rect x={mk.x - hw} y={mk.y - hh} width={mw} height={mh} rx={6}

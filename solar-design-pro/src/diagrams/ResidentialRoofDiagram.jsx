@@ -1,8 +1,8 @@
 import { forwardRef } from 'react';
 import { ff, c1, c2, bd, ac, tx, td, gn } from '../theme.js';
-import { badge, wireSchedule, pvArrayGroup } from './shared.jsx';
+import { badge, wireSchedule } from './shared.jsx';
 
-const ResidentialRoofDiagram = forwardRef(({ svW, svH, es, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr, modGroups, layPos, md, children }, ref) => {
+const ResidentialRoofDiagram = forwardRef(({ svW, svH, es, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr, children }, ref) => {
   const rows = [
     { seg: "Array → Rapid SD", spec: dcPV, circ: "DC PV", clr: "#dc2626", len: wr?.pv },
     ...(dcRun ? [{ seg: "Rapid SD → Inverter", spec: dcRun, circ: "DC Home Run", clr: "#b45309", len: wr?.dc }] : []),
@@ -24,8 +24,6 @@ const ResidentialRoofDiagram = forwardRef(({ svW, svH, es, dcPV, dcRun, acRun, s
 
       {/* House */}
       <polygon points="120,140 380,140 420,220 80,220" fill="url(#roofG)" stroke="#44403c" strokeWidth={1.5} />
-      <g transform="translate(160,152)">{pvArrayGroup(modGroups, layPos, md, { maxW: 180, maxH: 58 })}</g>
-      {badge(250, 145, "PV ARRAY", "#1e40af")}
 
       <rect x={90} y={220} width={320} height={150} fill="url(#wallG)" stroke="#78716c" strokeWidth={1.5} />
       <rect x={140} y={250} width={40} height={50} rx={2} fill="#bfdbfe" stroke="#78716c" strokeWidth={1} />

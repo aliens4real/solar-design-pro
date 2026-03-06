@@ -1,8 +1,8 @@
 import { forwardRef } from 'react';
 import { ff, c1, c2, bd, ac, tx, td } from '../theme.js';
-import { badge, wireSchedule, pvArrayGroup } from './shared.jsx';
+import { badge, wireSchedule } from './shared.jsx';
 
-const CommercialRoofDiagram = forwardRef(({ svW, svH, es, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr, modGroups, layPos, md, children }, ref) => {
+const CommercialRoofDiagram = forwardRef(({ svW, svH, es, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr, children }, ref) => {
   const rows = [
     { seg: "Array → Combiner", spec: dcPV, circ: "DC PV Strings ×" + nStr, clr: "#dc2626", len: wr?.pv },
     ...(dcRun ? [{ seg: "Combiner → Inverter", spec: dcRun, circ: "DC Combined", clr: "#b45309", len: wr?.dc }] : []),
@@ -25,10 +25,6 @@ const CommercialRoofDiagram = forwardRef(({ svW, svH, es, dcPV, dcRun, acRun, se
       <rect x={56} y={146} width={8} height={26} fill="#57534e" rx={1} />
       <rect x={556} y={146} width={8} height={26} fill="#57534e" rx={1} />
       <text x={310} y={280} textAnchor="middle" fill={td} fontSize={11} fontFamily={ff}>COMMERCIAL BUILDING</text>
-
-      {/* Rooftop PV */}
-      <g transform="translate(90,165)">{pvArrayGroup(modGroups, layPos, md, { maxW: 440, maxH: 50 })}</g>
-      {badge(310, 158, "ROOFTOP PV ARRAY", "#1e40af")}
 
       {/* Rooftop conduit rack */}
       <rect x={90} y={220} width={180} height={4} fill="#a8a29e" rx={1} />

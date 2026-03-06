@@ -17,7 +17,6 @@ function ln(id, from, to, label, spec, dir) {
 export function seedResidential(es, specs, isComm, ivs) {
   const { dcPV, dcRun, acRun, seRun, gecRun } = specs;
   const markers = [
-    mk("res_arr", 250, 180, "pv_array", "PV Array", "Rooftop"),
     mk("res_rb", 340, 260, "roofbox", "Roof Box", "SolaDeck 0799"),
     mk("res_rsd", 383, 129, "rapid_sd", "Rapid Shutdown", "NEC 690.12"),
     mk("res_inv", 468, 416, "inverter", "Inverter", "DC→AC"),
@@ -38,7 +37,6 @@ export function seedResidential(es, specs, isComm, ivs) {
   }
 
   const lines = [];
-  lines.push(ln("res_ln_pv", "res_arr", "res_rb", "DC PV Source", dcPV));
   lines.push(ln("res_ln_rb", "res_rb", "res_rsd", "DC Roof Box", dcRun));
   if (dcRun) {
     lines.push(ln("res_ln_dc", "res_rsd", "res_inv", "DC Home Run", dcRun));
@@ -55,7 +53,6 @@ export function seedResidential(es, specs, isComm, ivs) {
 export function seedCommercial(es, specs, isComm, ivs) {
   const { dcPV, dcRun, acRun, seRun, gecRun } = specs;
   const markers = [
-    mk("com_arr", 310, 170, "pv_array", "PV Array", "Rooftop"),
     mk("com_rb", 530, 220, "roofbox", "Roof Box", "SolaDeck 0799"),
     mk("com_rsd", 458, 179, "rapid_sd", "Rapid SD", "NEC 690.12"),
     mk("com_cmb", 115, 244, "combiner", "Combiner", "Rooftop"),
@@ -91,7 +88,6 @@ export function seedCommercial(es, specs, isComm, ivs) {
 export function seedGround(es, specs, isComm, ivs) {
   const { dcPV, dcRun, acRun, seRun, gecRun } = specs;
   const markers = [
-    mk("gnd_arr", 255, 250, "pv_array", "PV Array", "Ground Mount"),
     mk("gnd_cmb", 470, 293, "combiner", "Combiner Box", "At Array"),
     mk("gnd_inv", 626, 291, "inverter", "Inverter", "Pad Mount"),
     mk("gnd_acd", 715, 294, "disconnect", "AC Disconnect", "Lockable"),
@@ -116,7 +112,6 @@ export function seedGround(es, specs, isComm, ivs) {
 export function seedCarport(es, specs, isComm, ivs) {
   const { dcPV, dcRun, acRun, seRun, gecRun } = specs;
   const markers = [
-    mk("cp_arr", 255, 185, "pv_array", "PV Array", "Carport Canopy"),
     mk("cp_cmb", 434, 286, "combiner", "Combiner", "On Column"),
     mk("cp_inv", 533, 289, "inverter", "Inverter", "Pad/Wall"),
     mk("cp_acd", 630, 292, "disconnect", "AC Disconnect", "Lockable"),

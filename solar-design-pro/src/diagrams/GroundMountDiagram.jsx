@@ -1,8 +1,8 @@
 import { forwardRef } from 'react';
 import { ff, c1, c2, bd, ac, tx, td } from '../theme.js';
-import { badge, wireSchedule, pvArrayGroup } from './shared.jsx';
+import { badge, wireSchedule } from './shared.jsx';
 
-const GroundMountDiagram = forwardRef(({ svW, svH, es, isComm, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr, modGroups, layPos, md, children }, ref) => {
+const GroundMountDiagram = forwardRef(({ svW, svH, es, isComm, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr, children }, ref) => {
   const rows = [
     { seg: "Array → Combiner", spec: dcPV, circ: `DC PV Strings ×${nStr}`, clr: "#dc2626", len: wr?.pv },
     ...(dcRun ? [{ seg: "Combiner → Inverter (trench)", spec: dcRun, circ: "DC Home Run — PVC", clr: "#b45309", len: wr?.dc }] : []),
@@ -21,8 +21,6 @@ const GroundMountDiagram = forwardRef(({ svW, svH, es, isComm, dcPV, dcRun, acRu
 
       {/* Ground mount array */}
       {[0, 1, 2, 3, 4].map(i => <rect key={i} x={80 + i * 80} y={300} width={4} height={50} fill="#78716c" rx={1} />)}
-      <g transform="translate(70,220)">{pvArrayGroup(modGroups, layPos, md, { maxW: 370, maxH: 80 })}</g>
-      {badge(255, 212, "GROUND MOUNT PV ARRAY", "#1e40af")}
 
       {/* Underground trench */}
       <rect x={495} y={340} width={100} height={10} fill="#78716c" opacity={0.3} rx={2} />
