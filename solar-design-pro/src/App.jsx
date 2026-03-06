@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 
 // ── Data ──
 import { MODS } from './data/modules.js';
@@ -259,6 +259,24 @@ export default function App() {
   const cr = useRef(null);
   const sz = strCalc(md, iv, pj.tl, pj.th, pj.mt);
 
+  // ── String map (which string each module belongs to) ──
+  const strMap = useMemo(() => {
+    const ms = dsg?.ms || sz?.opt || 0;
+    if (!ms || ms < 1) return {};
+    let sn = 0, mi = 0;
+    const m = {};
+    modGroups.forEach(g => {
+      const cnt = +g.cnt || 0;
+      m[g.id] = [];
+      for (let i = 0; i < cnt; i++) {
+        m[g.id].push(sn);
+        mi++;
+        if (mi >= ms) { sn++; mi = 0; }
+      }
+    });
+    return m;
+  }, [modGroups, dsg, sz]);
+
   // ── Effects ──
   useEffect(() => { if (dsg && md && iv) { sPk(mkPack(md, iv, dsg, sz, wr, pj.es, pht, ivs)); } }, [dsg, md, iv, sz, wr, pj.es, pht, ivs]);
   useEffect(() => { cr.current?.scrollIntoView({ behavior: "smooth" }); }, [ms]);
@@ -441,6 +459,7 @@ RULES:
             snapPos={snapPos} updateModPos={updateModPos}
             faceScale={faceScale} faceSz={faceSz}
             SETBACK_FT={SETBACK_FT} LAY_W={LAY_W} GAP={GAP}
+            strMap={strMap}
           />
           <SiteElectricalTab pj={pj} sz={sz} iv={iv} dsg={dsg} dAn={dAn} sDan={sDan}
             modGroups={modGroups} layPos={layPos} md={md} ivs={ivs} />

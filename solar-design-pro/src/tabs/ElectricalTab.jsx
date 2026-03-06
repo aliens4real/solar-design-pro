@@ -1,7 +1,5 @@
 import { ff, c1, c2, bd, ac, tx, td, gn, rd, bl, bt, cd } from '../theme.js';
-
-// String layout SVG colors
-const SC = ["#2563eb", "#059669", "#d97706", "#7c3aed", "#dc2626", "#0891b2", "#be185d", "#4f46e5"];
+import { SC } from '../data/markers.js';
 
 function StringLayout({ md, iv, sz, dsg }) {
   const ms = dsg.ms || sz.opt || 1;

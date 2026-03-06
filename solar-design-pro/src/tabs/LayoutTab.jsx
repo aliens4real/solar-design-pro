@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ff, c1, c2, bd, ac, tx, td, gn, rd, bt, cd, inp } from '../theme.js';
+import { SC } from '../data/markers.js';
 
 const PITCHES = [["0","Flat"],["5","1:12"],["10","2:12"],["14","3:12"],["18","4:12"],["22","5:12"],["27","6:12"],["30","7:12"],["34","8:12"],["37","9:12"],["40","10:12"],["45","12:12"]];
 
@@ -19,7 +20,7 @@ export default function LayoutTab({
   md, iv, pj, totalMods, totalKw, modGroups, roofType, applyRoofPreset,
   addGroup, updGroup, delGroup, layPos, layDrag, setLayDrag, laySel, setLaySel,
   autoFillFace, resetGroupLayout, removeSelMod, addModToFace, snapPos,
-  updateModPos, faceScale, faceSz, SETBACK_FT, LAY_W, GAP
+  updateModPos, faceScale, faceSz, SETBACK_FT, LAY_W, GAP, strMap
 }) {
   // Module dimensions in mm
   const lm = md?.lm || 1722, wm = md?.wm || 1134;
@@ -243,6 +244,9 @@ export default function LayoutTab({
                       {mods.map((m, mi) => {
                         const isSel = laySel && laySel.gi === g.id && laySel.id === m.id;
                         const bigEnough = sz.w > 18 && sz.h > 14;
+                        const sn = strMap?.[g.id]?.[mi];
+                        const hasStr = sn != null;
+                        const sc2 = hasStr ? SC[sn % SC.length] : null;
                         return (
                           <div key={m.id}
                             data-mod="1"
@@ -252,8 +256,8 @@ export default function LayoutTab({
                               top: m.y,
                               width: sz.w,
                               height: sz.h,
-                              background: isSel ? "rgba(212,140,0,0.85)" : "#1e3a5f",
-                              border: isSel ? `2px solid ${ac}` : "1px solid rgba(30,58,95,0.6)",
+                              background: isSel ? "rgba(212,140,0,0.85)" : hasStr ? sc2 + "60" : "#1e3a5f",
+                              border: isSel ? `2px solid ${ac}` : hasStr ? `1px solid ${sc2}` : "1px solid rgba(30,58,95,0.6)",
                               borderRadius: 2,
                               cursor: "grab",
                               display: "flex",
@@ -261,7 +265,7 @@ export default function LayoutTab({
                               justifyContent: "center",
                               fontSize: bigEnough ? 8 : 6,
                               fontFamily: ff,
-                              color: isSel ? "#000" : "rgba(255,255,255,0.5)",
+                              color: isSel ? "#000" : "rgba(255,255,255,0.85)",
                               fontWeight: 600,
                               boxSizing: "border-box",
                               zIndex: isSel ? 10 : 1
@@ -278,7 +282,7 @@ export default function LayoutTab({
                               });
                             }}
                           >
-                            {bigEnough && (mi + 1)}
+                            {bigEnough && (hasStr ? `S${sn + 1}` : mi + 1)}
                           </div>
                         );
                       })}
@@ -293,6 +297,22 @@ export default function LayoutTab({
                   <span>Scale: 1ft = {gridStep}px</span>
                   <span>{mods.length} of {mods.length} placed</span>
                 </div>
+
+                {/* ──── String Legend ──── */}
+                {strMap?.[g.id]?.length > 0 && (() => {
+                  const strs = [...new Set(strMap[g.id])];
+                  return (
+                    <div style={{ display: "flex", gap: 10, marginTop: 6, flexWrap: "wrap", alignItems: "center" }}>
+                      <span style={{ fontFamily: ff, fontSize: 9, color: td, textTransform: "uppercase", letterSpacing: "0.06em" }}>Strings:</span>
+                      {strs.map(s => (
+                        <div key={s} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <div style={{ width: 10, height: 10, borderRadius: 2, background: SC[s % SC.length] }} />
+                          <span style={{ fontFamily: ff, fontSize: 9, color: tx, fontWeight: 600 }}>S{s + 1}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
