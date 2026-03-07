@@ -20,6 +20,21 @@ const compass = a => {
   return "N" + Math.round(360 - n) + "\u00b0W";
 };
 
+// ── Fractional inch formatter ──
+function fracIn(dec) {
+  const whole = Math.floor(dec);
+  const rem = dec - whole;
+  if (rem < 1/32) return `${whole}`;
+  // Snap to nearest 1/16
+  const sixteenths = Math.round(rem * 16);
+  if (sixteenths === 0) return `${whole}`;
+  if (sixteenths === 16) return `${whole + 1}`;
+  // Simplify fraction
+  let n = sixteenths, d = 16;
+  while (n % 2 === 0) { n /= 2; d /= 2; }
+  return whole > 0 ? `${whole}-${n}/${d}` : `${n}/${d}`;
+}
+
 // ── Architectural dimension annotation helpers ──
 const DIM_STYLE = { stroke: "#000", strokeWidth: 0.4, fill: "none" };
 const DIM_FONT = { fontFamily: "system-ui, sans-serif", fontSize: 9, fill: "#000", textAnchor: "middle" };
@@ -301,8 +316,9 @@ export default function LayoutTab({
               });
 
               const pad = 30;
-              const padR = 50; // extra right padding for right-side dims
-              const padB = 24; // extra bottom padding for cumulative horiz dims
+              const padL = 26; // extra left padding for left-side vertical dims
+              const padR = 20 + Math.max(1, rowData.length) * 28 + 30; // right padding: staggered vertical dims per row + total height dim
+              const padB = 50; // bottom padding for span chain + cumulative horiz dims
               return {
                 rows: rowData,
                 feet: allFeet,
@@ -314,9 +330,9 @@ export default function LayoutTab({
                 arrayLeftX,
                 arrayRightX,
                 vb: {
-                  x: svgMinX - pad,
+                  x: svgMinX - pad - padL,
                   y: svgMinY - pad,
-                  w: (svgMaxX - svgMinX) + pad + padR,
+                  w: (svgMaxX - svgMinX) + pad + padL + padR,
                   h: (svgMaxY - svgMinY) + pad + padB
                 }
               };
@@ -676,14 +692,14 @@ export default function LayoutTab({
                           const dimY = r0.modRects[r0.modRects.length - 1].y + r0.modRects[0].h + 6;
                           const elems = [];
                           // Left overhang
-                          elems.push(hDim(r0.modRects[0].x, r0.cols[0].x, dimY, `${r0.ovIn}"`, false, ff));
+                          elems.push(hDim(r0.modRects[0].x, r0.cols[0].x, dimY, `${fracIn(r0.ovIn)}"`, false, ff));
                           // Spans between feet
                           for (let i = 0; i < r0.cols.length - 1; i++) {
-                            elems.push(hDim(r0.cols[i].x, r0.cols[i + 1].x, dimY, `${r0.spIn}"`, false, ff));
+                            elems.push(hDim(r0.cols[i].x, r0.cols[i + 1].x, dimY, `${fracIn(r0.spIn)}"`, false, ff));
                           }
                           // Right overhang
                           const lastMod = r0.modRects[r0.modRects.length - 1];
-                          elems.push(hDim(r0.cols[r0.cols.length - 1].x, lastMod.x + lastMod.w, dimY, `${r0.ovIn}"`, false, ff));
+                          elems.push(hDim(r0.cols[r0.cols.length - 1].x, lastMod.x + lastMod.w, dimY, `${fracIn(r0.ovIn)}"`, false, ff));
                           return elems;
                         })()}
 
@@ -692,9 +708,9 @@ export default function LayoutTab({
                           const dimX = r0.modRects[0].x - 6;
                           return (
                             <g>
-                              {vDim(r0.y0, r0.ry1, dimX, `${r0.topIn}"`, true, ff)}
-                              {vDim(r0.ry1, r0.ry2, dimX - 14, `${r0.railGapIn}"`, true, ff)}
-                              {vDim(r0.ry2, r0.y0 + r0.modRects[0].h, dimX, `${r0.botIn}"`, true, ff)}
+                              {vDim(r0.y0, r0.ry1, dimX, `${fracIn(r0.topIn)}"`, true, ff)}
+                              {vDim(r0.ry1, r0.ry2, dimX - 14, `${fracIn(r0.railGapIn)}"`, true, ff)}
+                              {vDim(r0.ry2, r0.y0 + r0.modRects[0].h, dimX, `${fracIn(r0.botIn)}"`, true, ff)}
                             </g>
                           );
                         })()}
@@ -717,14 +733,14 @@ export default function LayoutTab({
                           fm.rows.forEach((row, ri) => {
                             const xOff = dimX + ri * 28;
                             // Top rail
-                            elems.push(vDim(topY, row.ry1, xOff, `Y: ${row.cumRy1}"`, false, ff));
+                            elems.push(vDim(topY, row.ry1, xOff, `Y: ${fracIn(row.cumRy1)}"`, false, ff));
                             // Bottom rail
-                            elems.push(vDim(topY, row.ry2, xOff + 14, `Y: ${row.cumRy2}"`, false, ff));
+                            elems.push(vDim(topY, row.ry2, xOff + 14, `Y: ${fracIn(row.cumRy2)}"`, false, ff));
                           });
 
                           // Overall array height (outermost right)
                           const outerX = dimX + fm.rows.length * 28;
-                          elems.push(vDim(fm.arrayTopY, fm.arrayBotY, outerX, `${fm.totalHeightIn}"`, false, ff));
+                          elems.push(vDim(fm.arrayTopY, fm.arrayBotY, outerX, `${fracIn(fm.totalHeightIn)}"`, false, ff));
                           return elems;
                         })()}
 
@@ -735,12 +751,12 @@ export default function LayoutTab({
                           const cumY = lastModBot + 20;
                           const elems = [];
                           // Overall width
-                          elems.push(hDim(fm.arrayLeftX, fm.arrayRightX, cumY, `${fm.totalWidthIn}"`, false, ff));
+                          elems.push(hDim(fm.arrayLeftX, fm.arrayRightX, cumY, `${fracIn(fm.totalWidthIn)}"`, false, ff));
                           // Cumulative from left corner to each intermediate foot
                           r0.cols.forEach((col, i) => {
                             if (i > 0 && i < r0.cols.length - 1) {
                               const dist = fm.pxIn(col.x - fm.arrayLeftX);
-                              elems.push(hDim(fm.arrayLeftX, col.x, cumY + 14, `${dist}"`, false, ff));
+                              elems.push(hDim(fm.arrayLeftX, col.x, cumY + 14, `${fracIn(dist)}"`, false, ff));
                             }
                           });
                           return elems;
@@ -748,7 +764,7 @@ export default function LayoutTab({
                       </svg>
 
                       <div style={{ fontFamily: ff, fontSize: 9, color: td, marginTop: 4 }}>
-                        Origin: upper-left corner | Overhang: {r0?.ovIn}" | Spacing: {r0?.spIn}" | Rail gap: {r0?.railGapIn}" | Total: {fm.totalWidthIn}" x {fm.totalHeightIn}"
+                        Origin: upper-left corner | Overhang: {fracIn(r0?.ovIn)}" | Spacing: {fracIn(r0?.spIn)}" | Rail gap: {fracIn(r0?.railGapIn)}" | Total: {fracIn(fm.totalWidthIn)}" x {fracIn(fm.totalHeightIn)}"
                       </div>
                     </div>
                   );
