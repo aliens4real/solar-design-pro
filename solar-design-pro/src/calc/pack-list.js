@@ -160,6 +160,43 @@ export function mkPack(m, iv, d, sz, wr, es, pht, ivs, rack) {
     });
   }
 
+  // ── Photo-annotated markers (user-placed only; imported markers already in core BOM) ──
+  if (pht && pht.length > 0) {
+    const MCAT_BOM = {
+      inverter:      { c: "Inverters",   d: "Inverter",              $: 0 },
+      disconnect:    { c: "Disconnect",  d: "AC Disconnect 240V",    $: 51 },
+      panel:         { c: "Panel",       d: "Panel/Breaker Box",     $: 85 },
+      junction:      { c: "BOS",         d: "JBox PVC 8x8x4",       $: 12.5 },
+      grounding:     { c: "Ground",      d: "Ground Rod Kit",        $: 21.29 },
+      meter:         { c: "Metering",    d: "Meter Socket",          $: 45 },
+      envoy:         { c: "Enphase",     d: "IQ Gateway",            $: 628 },
+      rapid_sd:      { c: "Safety",      d: "Rapid Shutdown Device", $: 125 },
+      combiner:      { c: "BOS",         d: "Combiner Box",          $: 95 },
+      dc_disconnect: { c: "Disconnect",  d: "DC Disconnect 600V",    $: 51 },
+      transformer:   { c: "Electrical",  d: "Transformer",           $: 0 },
+      prod_meter:    { c: "Metering",    d: "Production Meter",      $: 65 },
+      trough:        { c: "Electrical",  d: "Electrical Trough",     $: 35 },
+      roofbox:       { c: "BOS",         d: "SolaDeck Roof Box",     $: 85 },
+    };
+
+    const photoMk = pht.flatMap(p => (p.mk || [])
+      .filter(m => !m.imported && m.ct !== "note" && m.ct !== "pv_array"));
+
+    const mkCounts = {};
+    photoMk.forEach(m => {
+      const cat = m.ct;
+      if (!mkCounts[cat]) mkCounts[cat] = { count: 0, label: m.lb };
+      mkCounts[cat].count++;
+    });
+
+    Object.entries(mkCounts).forEach(([cat, { count, label }]) => {
+      const bom = MCAT_BOM[cat];
+      if (!bom) return;
+      const desc = label || bom.d;
+      a(bom.c, `${desc} (Photo)`, count, "ea", bom.$);
+    });
+  }
+
   const totalInvUnits = hasMultiIv ? ivs.reduce((s, e) => s + e.qty, 0) : ni;
   a("OCPD", "Breaker " + (sz?.oc || d.aoc || 40) + "A 2p", totalInvUnits, "ea", 24.65);
   if (!mi) a("Disconnect", "DC Disconnect 600V", totalInvUnits, "ea", 51);

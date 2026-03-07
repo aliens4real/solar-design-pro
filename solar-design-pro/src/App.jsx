@@ -199,21 +199,15 @@ export default function App() {
   }, [modGroups, md, gapIn]);
 
   const snapPos = (gid, idx, rawX, rawY, ori, fw) => {
-    const mods = layPos[gid] || [];
     const sz = fw ? faceSz(ori, fw) : modSz(ori);
-    let bx = rawX, by = rawY;
-    const edges = { xs: [], ys: [] };
-    mods.forEach((m, i) => {
-      if (m.id === idx) return;
-      const ms = sz;
-      const gp = fw ? gapPx(fw) : 2;
-      edges.xs.push(m.x, m.x + ms.w, m.x - sz.w - gp, m.x + ms.w + gp);
-      edges.ys.push(m.y, m.y + ms.h, m.y - sz.h - gp, m.y + ms.h + gp);
-    });
-    let bestDx = SNAP + 1;
-    for (const ex of edges.xs) { const d = Math.abs(rawX - ex); if (d < bestDx) { bestDx = d; bx = ex; } }
-    let bestDy = SNAP + 1;
-    for (const ey of edges.ys) { const d = Math.abs(rawY - ey); if (d < bestDy) { bestDy = d; by = ey; } }
+    const gp = fw ? gapPx(fw) : 2;
+    const sc = faceScale(fw || 30);
+    const sb = SETBACK_FT * 12 * 25.4 * sc;
+    // Grid step = module size + gap
+    const stepX = sz.w + gp, stepY = sz.h + gp;
+    // Snap to nearest grid position anchored at setback
+    const bx = sb + Math.round((rawX - sb) / stepX) * stepX;
+    const by = sb + Math.round((rawY - sb) / stepY) * stepY;
     return { x: Math.max(0, bx), y: Math.max(0, by) };
   };
 

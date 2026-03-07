@@ -1,5 +1,5 @@
 import { useRef, useCallback, useMemo, useEffect, useState } from 'react';
-import { ff, c1, c2, bd, ac, tx, td, cd } from '../theme.js';
+import { ff, c1, c2, bd, ac, tx, td, cd, bt } from '../theme.js';
 import { egcSize, gecSize, seSize } from '../calc/nec-sizing.js';
 import { calcConduit } from '../diagrams/shared.jsx';
 import ResidentialRoofDiagram, { BASEMENT_Y, EXTERIOR_ZONE } from '../diagrams/ResidentialRoofDiagram.jsx';
@@ -104,6 +104,63 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroup
       return { ...prev, mk: newMk, ln: newLn };
     });
   }, [modGroups, mt, sDan]);
+
+  // ── Manual sync: full refresh of array markers from current modGroups ──
+  const syncArrays = useCallback(() => {
+    const activeGroups = modGroups.filter(g => (+g.cnt || 0) > 0);
+    if (activeGroups.length === 0) return;
+
+    const basePos = mt === "ground" ? { x: 200, y: 250 }
+      : mt === "carport" ? { x: 200, y: 185 }
+      : isComm ? { x: 200, y: 180 }
+      : { x: 350, y: 120 };
+    const spacing = 120;
+
+    sDan(prev => {
+      const existing = (prev.mk || []).filter(m => m.ct === "pv_array");
+      const existingGids = new Set(existing.map(m => m.gid));
+      const activeGids = new Set(activeGroups.map(g => g.id));
+      // Remove markers for deleted groups
+      let newMk = (prev.mk || []).filter(m => m.ct !== "pv_array" || activeGids.has(m.gid));
+      // Update labels on existing markers
+      activeGroups.forEach(g => {
+        const idx = newMk.findIndex(m => m.ct === "pv_array" && m.gid === g.id);
+        if (idx >= 0) newMk[idx] = { ...newMk[idx], lb: g.nm || "Array" };
+      });
+      // Remove lines referencing deleted pv_array markers
+      const removedIds = new Set(existing.filter(m => !activeGids.has(m.gid)).map(m => m.id));
+      let newLn = (prev.ln || []).filter(l => !removedIds.has(l.from) && !removedIds.has(l.to) && !l._arrSync);
+      // Add markers + PV wire runs for new groups
+      const rsdMk = newMk.find(m => m.ct === "rapid_sd");
+      const rbMk = newMk.find(m => m.ct === "roofbox");
+      const pvTarget = rsdMk || rbMk;
+      const pvSpec = dcPV ? { wire: dcPV.wires?.[0]?.g, wireType: dcPV.wires?.[0]?.t, qty: dcPV.wires?.[0]?.n, conduit: dcPV.conduit } : {};
+      activeGroups.forEach((g, i) => {
+        const arrId = "arr_" + g.id;
+        if (!existingGids.has(g.id)) {
+          newMk.push({
+            id: arrId, x: basePos.x + i * spacing, y: basePos.y,
+            ct: "pv_array", lb: g.nm || "Array " + (i + 1), dt: "",
+            gid: g.id, w: 36, h: 36,
+          });
+        }
+        if (pvTarget) {
+          const lnId = "ln_pv_" + g.id;
+          if (!newLn.some(l => l.id === lnId)) {
+            newLn.push({
+              id: lnId, from: arrId, to: pvTarget.id,
+              label: "PV Source", dir: "h", bendR: 12, co: null,
+              _arrSync: true, ...pvSpec,
+            });
+          }
+        }
+      });
+      return { ...prev, mk: newMk, ln: newLn };
+    });
+
+    // Update sync key so auto-useEffect stays in sync
+    arrSyncRef.current = activeGroups.map(g => g.id).join(",");
+  }, [modGroups, mt, isComm, dcPV, sDan]);
 
   // ── Sync inverter markers: one icon per inverter unit ──
   // Creates full NEC-compliant wiring for each inverter:
@@ -303,6 +360,7 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroup
     <div style={{ ...cd, marginTop: 16 }}>
       <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center", flexWrap: "wrap" }}>
         <h3 style={{ fontFamily: ff, fontSize: 13, color: ac, margin: 0, fontWeight: 700 }}>⚡ Site Electrical Layout</h3>
+        <button onClick={syncArrays} style={{ ...bt(false), fontSize: 9, padding: "3px 8px" }}>Sync Module Layouts</button>
         <span style={{ fontFamily: ff, fontSize: 9, color: td }}>
           {mt === "roof" ? "Residential Roof Mount" : mt === "ground" ? "Ground Mount System" : mt === "carport" ? "Carport Mount" : "System"} — {es}A Service
         </span>

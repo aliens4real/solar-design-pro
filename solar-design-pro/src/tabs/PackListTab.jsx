@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ff, c1, c2, bd, ac, tx, td, gn, rd, bt, cd } from '../theme.js';
 import { MCATS } from '../data/markers.js';
 
@@ -55,6 +55,26 @@ export default function PackListTab({ pk, dsg, md, iv, sz, pj, sDsg, mkr }) {
     return m && m.qty >= it.q;
   }).length;
 
+  // Shopping list: group matched items by warehouse location
+  const [checked, setChecked] = useState({});
+  const toggle = (key) => setChecked(p => ({ ...p, [key]: !p[key] }));
+
+  const shopList = useMemo(() => {
+    if (!invItems.length || !pk.length) return [];
+    const groups = {};
+    pk.forEach((it, i) => {
+      const m = matches[i];
+      if (!m) return;
+      const loc = m.notes?.split("|")[1]?.trim() || "No Location";
+      if (!groups[loc]) groups[loc] = [];
+      groups[loc].push({ it, m, key: `${i}_${it.d}` });
+    });
+    return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }));
+  }, [pk, matches, invItems]);
+
+  const shopTotal = shopList.reduce((s, [, items]) => s + items.length, 0);
+  const shopChecked = Object.values(checked).filter(Boolean).length;
+
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto" }} className="fi">
       <div style={{ display: "flex", gap: 10, marginBottom: 14, alignItems: "center" }}>
@@ -105,6 +125,92 @@ export default function PackListTab({ pk, dsg, md, iv, sz, pj, sDsg, mkr }) {
               {invItems.length > 0 && <td colSpan={2} />}
             </tr></tfoot>
           </table></div>
+
+        {/* ═══ CONDUIT SIZING REFERENCE ═══ */}
+        {pk.some(it => it.c === "Conduit") && (
+          <details style={{ ...cd, marginTop: 14 }}>
+            <summary style={{ fontFamily: ff, fontSize: 13, fontWeight: 700, color: ac, cursor: "pointer", userSelect: "none" }}>
+              Conduit Accessories — How Quantities Are Calculated
+            </summary>
+            <div style={{ marginTop: 10, fontFamily: ff, fontSize: 11, color: tx, lineHeight: 1.8 }}>
+              <p style={{ margin: "0 0 6px", color: td, fontSize: 10 }}>
+                Per conduit run, the BOM emits 7 line items. Formulas use <b>run length</b> (ft) from the Site Electrical Layout wire runs and <b>endpoints</b> (number of enclosure entries on the run).
+              </p>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                <thead><tr style={{ background: c2 }}>
+                  {["Accessory", "Formula", "NEC Ref", "Notes"].map(h =>
+                    <th key={h} style={{ padding: "6px 10px", textAlign: "left", color: ac, fontSize: 10, borderBottom: `1px solid ${bd}`, fontWeight: 600 }}>{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {[
+                    ["EMT 10ft Sticks", "ceil(length / 10)", "—", "Standard 10ft trade size sticks"],
+                    ["Set Screw Couplings", "sticks − 1", "—", "One coupling joins each pair of sticks"],
+                    ["Set Screw Connectors", "endpoints", "NEC 358.42", "One per enclosure entry; AC branch = 4 (inverter + disconnect in/out + panel), others = 2"],
+                    ["Locknuts", "endpoints", "NEC 358.42", "One per connector, secures connector to enclosure knockout"],
+                    ["Insulating Bushings", "endpoints", "NEC 300.4(G)", "One per connector, protects wire insulation at termination"],
+                    ["One-Hole Straps", "ceil(length / 10) + 1", "NEC 358.30", "Within 3ft of each box + every 10ft of run"],
+                    ["LB Fittings", "max(1, ceil(length / 25))", "NEC 358.26", "At least 1 per run for direction change; additional every 25ft"],
+                  ].map(([acc, formula, nec, note], i) => (
+                    <tr key={i} style={{ borderBottom: `1px solid ${bd}08` }}>
+                      <td style={{ padding: "5px 10px", fontWeight: 600 }}>{acc}</td>
+                      <td style={{ padding: "5px 10px", fontFamily: "monospace", fontSize: 10, color: ac }}>{formula}</td>
+                      <td style={{ padding: "5px 10px", color: td, fontSize: 10 }}>{nec}</td>
+                      <td style={{ padding: "5px 10px", color: td, fontSize: 10 }}>{note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p style={{ margin: "8px 0 2px", color: td, fontSize: 10 }}>
+                <b>Endpoints by run type:</b> DC Home Run = 2 (roof box → inverter) · AC Branch = 4 (inverter → disconnect in/out → panel) · Service Entrance = 2 (meter → panel)
+              </p>
+              <p style={{ margin: "2px 0 0", color: td, fontSize: 10 }}>
+                Conduit size is auto-calculated per NEC 40% fill rule based on wire count and gauge. All quantities include the labeled run segment only — adjust manually for site-specific routing.
+              </p>
+            </div>
+          </details>
+        )}
+
+        {/* ═══ VAN LOADING LIST ═══ */}
+        {shopList.length > 0 && (
+          <div style={{ ...cd, marginTop: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <span style={{ fontFamily: ff, fontSize: 13, fontWeight: 700, color: ac }}>VAN LOADING LIST — By Warehouse Location</span>
+              <div style={{ flex: 1 }} />
+              <span style={{ fontFamily: ff, fontSize: 11, color: shopChecked === shopTotal ? gn : tx }}>
+                {shopChecked} of {shopTotal} items packed
+              </span>
+            </div>
+            {/* Progress bar */}
+            <div style={{ height: 4, background: `${bd}40`, borderRadius: 2, marginBottom: 12, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: shopTotal > 0 ? `${(shopChecked / shopTotal) * 100}%` : "0%", background: shopChecked === shopTotal ? gn : ac, borderRadius: 2, transition: "width 0.3s" }} />
+            </div>
+            {shopList.map(([loc, items]) => {
+              const locChecked = items.filter(it => checked[it.key]).length;
+              return (
+                <details key={loc} open style={{ marginBottom: 6 }}>
+                  <summary style={{ fontFamily: ff, fontSize: 11, fontWeight: 700, color: tx, cursor: "pointer", padding: "6px 0", borderBottom: `1px solid ${bd}20`, userSelect: "none" }}>
+                    {loc} <span style={{ fontWeight: 400, color: td }}>({locChecked}/{items.length})</span>
+                  </summary>
+                  <div style={{ paddingLeft: 4 }}>
+                    {items.map(({ it, key }) => {
+                      const done = checked[key];
+                      return (
+                        <div key={key} onClick={() => toggle(key)}
+                          style={{ display: "flex", gap: 10, alignItems: "center", padding: "5px 8px", cursor: "pointer", borderBottom: `1px solid ${bd}08`,
+                            opacity: done ? 0.45 : 1, textDecoration: done ? "line-through" : "none" }}>
+                          <span style={{ fontSize: 14, color: done ? gn : td, flexShrink: 0 }}>{done ? "\u2611" : "\u2610"}</span>
+                          <span style={{ fontFamily: ff, fontSize: 11, flex: 1 }}>{it.d}</span>
+                          <span style={{ fontFamily: ff, fontSize: 11, color: ac, fontWeight: 600, minWidth: 36, textAlign: "right" }}>{it.q}</span>
+                          <span style={{ fontFamily: ff, fontSize: 10, color: td, minWidth: 30 }}>{it.u}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+        )}
 
         {dsg?.steps?.length > 0 && <div style={{ ...cd, marginTop: 14 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: ac, marginBottom: 10, fontFamily: ff }}>INSTALLATION STEPS</div>
