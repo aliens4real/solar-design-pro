@@ -3,6 +3,7 @@ import { ff, c1, c2, bd, ac, tx, td, gn } from '../theme.js';
 import { badge, wireSchedule } from './shared.jsx';
 
 export const BASEMENT_Y = 545;
+export const EXTERIOR_ZONE = { x: 610, y: 370, w: 100, h: 170 };
 
 const ResidentialRoofDiagram = forwardRef(({ svW, svH, es, dcPV, dcRun, acRun, seRun, gecRun, nStr, wr, children }, ref) => {
   const hasBsmt = svH > 700;
@@ -51,6 +52,12 @@ const ResidentialRoofDiagram = forwardRef(({ svW, svH, es, dcPV, dcRun, acRun, s
       {/* Bush on side of house */}
       <ellipse cx={160} cy={510} rx={16} ry={18} fill="#22c55e" opacity={0.5} />
       <ellipse cx={158} cy={495} rx={13} ry={14} fill="#4ade80" opacity={0.45} />
+
+      {/* Exterior Wall Zone — right side of house wall */}
+      <rect x={EXTERIOR_ZONE.x} y={EXTERIOR_ZONE.y} width={EXTERIOR_ZONE.w} height={EXTERIOR_ZONE.h}
+        rx={4} fill="none" stroke="#a855f7" strokeWidth={1.5} strokeDasharray="8 4" opacity={0.7} />
+      <text x={EXTERIOR_ZONE.x + EXTERIOR_ZONE.w / 2} y={EXTERIOR_ZONE.y - 4} textAnchor="middle"
+        fill="#a855f7" fontSize={9} fontFamily={ff} fontWeight={600} opacity={0.8}>EXTERIOR WALL</text>
 
       {/* Basement / Below Grade — centered below house */}
       {hasBsmt && <>

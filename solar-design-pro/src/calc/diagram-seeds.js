@@ -34,9 +34,9 @@ export function seedResidential(es, specs, isComm, ivs) {
   const markers = [
     mk("res_rsd", 400, 100, "rapid_sd", "Rapid Shutdown", "NEC 690.12"),
     mk("res_rb", 400, 210, "roofbox", "Roof Box", "SolaDeck 0799"),
-    mk("res_mtr", 635, 400, "meter", "Utility Meter", "Revenue"),
-    mk("res_pm", 635, 450, "prod_meter", "Prod. Meter", ""),
-    mk("res_gec", 655, 530, "grounding", "GEC", "Ground Rod"),
+    mk("res_mtr", 635, 400, "meter", "Utility Meter", "Revenue", "exterior"),
+    mk("res_pm", 635, 450, "prod_meter", "Prod. Meter", "", "exterior"),
+    mk("res_gec", 655, 530, "grounding", "GEC", "Ground Rod", "exterior"),
     mk("res_inv", 250, 630, "inverter", invLabel(ivs, 0), invDetail(ivs, 0), "basement"),
     mk("res_acd", 350, 630, "disconnect", "AC Disconnect", "Lockable", "basement"),
     mk("res_pnl", 460, 630, "panel", "Main Panel", `${es}A Service`, "basement"),

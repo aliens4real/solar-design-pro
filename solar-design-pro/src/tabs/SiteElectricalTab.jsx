@@ -2,7 +2,7 @@ import { useRef, useCallback, useMemo, useEffect, useState } from 'react';
 import { ff, c1, c2, bd, ac, tx, td, cd } from '../theme.js';
 import { egcSize, gecSize, seSize } from '../calc/nec-sizing.js';
 import { calcConduit } from '../diagrams/shared.jsx';
-import ResidentialRoofDiagram from '../diagrams/ResidentialRoofDiagram.jsx';
+import ResidentialRoofDiagram, { BASEMENT_Y, EXTERIOR_ZONE } from '../diagrams/ResidentialRoofDiagram.jsx';
 import CommercialRoofDiagram from '../diagrams/CommercialRoofDiagram.jsx';
 import GroundMountDiagram from '../diagrams/GroundMountDiagram.jsx';
 import CarportDiagram from '../diagrams/CarportDiagram.jsx';
@@ -14,7 +14,7 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroup
   const es = +(pj.es || 200);
   const isComm = es >= 320;
   const svW = 1060;
-  const svH = mt === "ground" ? 580 : mt === "carport" ? 620 : isComm ? 590 : 620;
+  const svH = mt === "ground" ? 580 : mt === "carport" ? 620 : isComm ? 590 : 1000;
   const isMicro = iv?.tp === "micro";
   const svgRef = useRef(null);
 
@@ -45,6 +45,7 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroup
     if (!seedFn) return;
     sDan(seedFn(es, { dcPV, dcRun, acRun, seRun, gecRun }, isComm, ivs));
     seedRef.current = key;
+    ivSyncRef.current = null; // force inverter sync to re-run after seed
   }, [mt, isComm]);
 
   // ── Sync pv_array markers with modGroups (one marker per group) ──
@@ -56,7 +57,8 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroup
     // Determine default positions based on mount type
     const basePos = mt === "ground" ? { x: 200, y: 250 }
       : mt === "carport" ? { x: 200, y: 185 }
-      : { x: 200, y: 180 }; // residential/commercial
+      : isComm ? { x: 200, y: 180 }
+      : { x: 350, y: 120 }; // residential (bigger centered house)
     const spacing = 120;
 
     const key = activeGroups.map(g => g.id).join(",");
@@ -85,6 +87,98 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroup
       return { ...prev, mk: newMk, ln: newLn };
     });
   }, [modGroups, mt, sDan]);
+
+  // ── Sync inverter markers: one icon per inverter unit ──
+  const ivSyncRef = useRef(null);
+  useEffect(() => {
+    if (!ivs || ivs.length === 0) return;
+    const totalQty = ivs.reduce((s, e) => s + (e.qty || 1), 0);
+    const key = ivs.map(e => `${e.model}:${e.qty}`).join(",");
+    if (ivSyncRef.current === key) return;
+    ivSyncRef.current = key;
+
+    sDan(prev => {
+      let newMk = [...(prev.mk || [])];
+      let newLn = [...(prev.ln || [])];
+
+      // Primary inverter = first non-synced inverter marker
+      const primInv = newMk.find(m => m.ct === "inverter" && !m._ivSync);
+      if (!primInv) return prev;
+
+      // Primary AC disconnect = first disconnect linked from primary inverter
+      const acLn = newLn.find(l => l.from === primInv.id && !l._ivSync &&
+        newMk.some(m => m.id === l.to && m.ct === "disconnect"));
+      const primAcd = acLn ? newMk.find(m => m.id === acLn.to) : null;
+
+      // Collect extra inverter IDs (seed extras + old synced)
+      const extraInvIds = new Set(
+        newMk.filter(m => m.ct === "inverter" && m.id !== primInv.id).map(m => m.id)
+      );
+      // Find disconnect markers paired with extra inverters via lines
+      const extraAcdIds = new Set();
+      newLn.forEach(l => {
+        if (extraInvIds.has(l.from)) {
+          const tgt = newMk.find(m => m.id === l.to && m.ct === "disconnect");
+          if (tgt) extraAcdIds.add(tgt.id);
+        }
+      });
+      newMk.forEach(m => { if (m._ivSync && m.ct === "disconnect") extraAcdIds.add(m.id); });
+
+      const removeIds = new Set([...extraInvIds, ...extraAcdIds]);
+      newMk = newMk.filter(m => !removeIds.has(m.id));
+      newLn = newLn.filter(l =>
+        !removeIds.has(l.from) && !(l.to && removeIds.has(l.to)) && !l._ivSync);
+
+      // Flat list of inverters (one entry per unit)
+      const flat = [];
+      ivs.forEach(e => { for (let q = 0; q < (e.qty || 1); q++) flat.push(e); });
+
+      // Update primary inverter label
+      const pi = newMk.findIndex(m => m.id === primInv.id);
+      if (pi >= 0) {
+        newMk[pi] = { ...newMk[pi],
+          lb: totalQty > 1 ? "Inverter 1" : "Inverter",
+          dt: flat[0]?.inv?.nm || newMk[pi].dt,
+        };
+      }
+      // Update primary disconnect label
+      if (primAcd) {
+        const ai = newMk.findIndex(m => m.id === primAcd.id);
+        if (ai >= 0) newMk[ai] = { ...newMk[ai], lb: totalQty > 1 ? "AC Disc. 1" : "AC Disconnect" };
+      }
+
+      // Copy wire spec from existing AC line
+      const sp = acLn ? { wire: acLn.wire, wireType: acLn.wireType, qty: acLn.qty, conduit: acLn.conduit } : {};
+
+      // Add synced inverter + disconnect + line for units 2..n
+      const gap = 40;
+      for (let i = 1; i < totalQty; i++) {
+        const f = flat[i] || flat[0];
+        const invId = `iv_s_${i}`, acdId = `ad_s_${i}`;
+
+        newMk.push({
+          id: invId, x: primInv.x, y: primInv.y + i * gap,
+          ct: "inverter", lb: `Inverter ${i + 1}`, dt: f.inv?.nm || "",
+          w: primInv.w || 36, h: primInv.h || 36, _ivSync: true,
+        });
+
+        if (primAcd) {
+          newMk.push({
+            id: acdId, x: primAcd.x, y: primAcd.y + i * gap,
+            ct: "disconnect", lb: `AC Disc. ${i + 1}`, dt: "Lockable",
+            w: primAcd.w || 36, h: primAcd.h || 36, _ivSync: true,
+          });
+          newLn.push({
+            id: `ln_s_ac_${i}`, from: invId, to: acdId,
+            label: "AC Branch", dir: "h", bendR: 12, co: null,
+            _ivSync: true, ...sp,
+          });
+        }
+      }
+
+      return { mk: newMk, ln: newLn };
+    });
+  }, [ivs, sDan]);
 
   const SITE_RUNS = useMemo(() => [
     { key: "dcPV", label: "PV Source Circuit", spec: dcPV },
@@ -115,7 +209,18 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroup
     return pt.matrixTransform(ctm.inverse());
   }, []);
 
-  const updAn = useCallback(fn => sDan(prev => fn(prev)), [sDan]);
+  const isRes = mt === "roof" && !isComm;
+  const updAn = useCallback(fn => sDan(prev => {
+    const next = fn(prev);
+    if (!isRes) return next;
+    const ez = EXTERIOR_ZONE;
+    return { ...next, mk: (next.mk || []).map(m => {
+      if (m.y >= BASEMENT_Y) return { ...m, zone: "basement" };
+      if (m.x >= ez.x && m.x <= ez.x + ez.w && m.y >= ez.y && m.y <= ez.y + ez.h) return { ...m, zone: "exterior" };
+      if (m.zone === "basement" || m.zone === "exterior") return { ...m, zone: undefined };
+      return m;
+    }) };
+  }), [sDan, isRes]);
 
   const containerSize = { w: svW, h: svH };
 
