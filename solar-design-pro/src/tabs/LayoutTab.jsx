@@ -315,10 +315,14 @@ export default function LayoutTab({
                 row.cumRy2 = pxIn(row.ry2 - arrayTopY);
               });
 
-              const pad = 30;
-              const padL = 26; // extra left padding for left-side vertical dims
-              const padR = 20 + Math.max(1, rowData.length) * 28 + 30; // right padding: staggered vertical dims per row + total height dim
-              const padB = 50; // bottom padding for span chain + cumulative horiz dims
+              // Left: local dims (2 cols) + cumulative Y per row (2 cols each) + total height (1 col) + labels
+              const nVCols = 2 + Math.max(1, rowData.length) * 2 + 1;
+              const padL = nVCols * 14 + 16;
+              const padR = 12; // minimal right padding
+              // Top: segment chain + cumulative X per foot + total width + labels
+              const nFootCols = rowData[0]?.cols?.length || 2;
+              const padT = (nFootCols + 1) * 14 + 10;
+              const padB = 12; // minimal bottom padding
               return {
                 rows: rowData,
                 feet: allFeet,
@@ -330,10 +334,10 @@ export default function LayoutTab({
                 arrayLeftX,
                 arrayRightX,
                 vb: {
-                  x: svgMinX - pad - padL,
-                  y: svgMinY - pad,
-                  w: (svgMaxX - svgMinX) + pad + padL + padR,
-                  h: (svgMaxY - svgMinY) + pad + padB
+                  x: svgMinX - padL,
+                  y: svgMinY - padT,
+                  w: (svgMaxX - svgMinX) + padL + padR,
+                  h: (svgMaxY - svgMinY) + padT + padB
                 }
               };
             })();
@@ -687,80 +691,65 @@ export default function LayoutTab({
                           </g>
                         ))}
 
-                        {/* Horizontal dimension chain below first row */}
+                        {/* ── Nested horizontal dimensions ABOVE array ── */}
                         {r0 && r0.cols.length >= 2 && (() => {
-                          const dimY = r0.modRects[r0.modRects.length - 1].y + r0.modRects[0].h + 6;
-                          const elems = [];
-                          // Left overhang
-                          elems.push(hDim(r0.modRects[0].x, r0.cols[0].x, dimY, `${fracIn(r0.ovIn)}"`, false, ff));
-                          // Spans between feet
-                          for (let i = 0; i < r0.cols.length - 1; i++) {
-                            elems.push(hDim(r0.cols[i].x, r0.cols[i + 1].x, dimY, `${fracIn(r0.spIn)}"`, false, ff));
-                          }
-                          // Right overhang
-                          const lastMod = r0.modRects[r0.modRects.length - 1];
-                          elems.push(hDim(r0.cols[r0.cols.length - 1].x, lastMod.x + lastMod.w, dimY, `${fracIn(r0.ovIn)}"`, false, ff));
-                          return elems;
-                        })()}
-
-                        {/* Vertical dimensions left of first row */}
-                        {r0 && (() => {
-                          const dimX = r0.modRects[0].x - 6;
-                          return (
-                            <g>
-                              {vDim(r0.y0, r0.ry1, dimX, `${fracIn(r0.topIn)}"`, true, ff)}
-                              {vDim(r0.ry1, r0.ry2, dimX - 14, `${fracIn(r0.railGapIn)}"`, true, ff)}
-                              {vDim(r0.ry2, r0.y0 + r0.modRects[0].h, dimX, `${fracIn(r0.botIn)}"`, true, ff)}
-                            </g>
-                          );
-                        })()}
-
-                        {/* Right-side vertical dimensions — corner-referenced cumulative */}
-                        {fm.rows.length > 0 && (() => {
-                          // Find the rightmost module edge across ALL rows
-                          let maxRight = 0;
-                          fm.rows.forEach(row => {
-                            row.modRects.forEach(r => {
-                              if (r.x + r.w > maxRight) maxRight = r.x + r.w;
-                            });
-                          });
-                          const dimX = maxRight + 6;
                           const topY = fm.arrayTopY;
+                          const step = 14;
                           const elems = [];
 
-                          // Cumulative Y dims: from array top to each row's foot positions
-                          // Stagger columns by row to avoid overlap
-                          fm.rows.forEach((row, ri) => {
-                            const xOff = dimX + ri * 28;
-                            // Top rail
-                            elems.push(vDim(topY, row.ry1, xOff, `Y: ${fracIn(row.cumRy1)}"`, false, ff));
-                            // Bottom rail
-                            elems.push(vDim(topY, row.ry2, xOff + 14, `Y: ${fracIn(row.cumRy2)}"`, false, ff));
-                          });
+                          // Row 0 (innermost, closest to array): individual segment chain
+                          const chainY = topY;
+                          elems.push(hDim(r0.modRects[0].x, r0.cols[0].x, chainY, `${fracIn(r0.ovIn)}"`, true, ff));
+                          for (let i = 0; i < r0.cols.length - 1; i++) {
+                            elems.push(hDim(r0.cols[i].x, r0.cols[i + 1].x, chainY, `${fracIn(r0.spIn)}"`, true, ff));
+                          }
+                          const lastMod = r0.modRects[r0.modRects.length - 1];
+                          elems.push(hDim(r0.cols[r0.cols.length - 1].x, lastMod.x + lastMod.w, chainY, `${fracIn(r0.ovIn)}"`, true, ff));
 
-                          // Overall array height (outermost right)
-                          const outerX = dimX + fm.rows.length * 28;
-                          elems.push(vDim(fm.arrayTopY, fm.arrayBotY, outerX, `${fracIn(fm.totalHeightIn)}"`, false, ff));
-                          return elems;
-                        })()}
-
-                        {/* Cumulative horizontal dimensions below the span chain */}
-                        {r0 && r0.cols.length >= 2 && (() => {
-                          const lastRow = fm.rows[fm.rows.length - 1];
-                          const lastModBot = (lastRow.modRects[0]?.y || 0) + (lastRow.modRects[0]?.h || 0);
-                          const cumY = lastModBot + 20;
-                          const elems = [];
-                          // Overall width
-                          elems.push(hDim(fm.arrayLeftX, fm.arrayRightX, cumY, `${fracIn(fm.totalWidthIn)}"`, false, ff));
-                          // Cumulative from left corner to each intermediate foot
+                          // Rows 1..N: cumulative from left edge to each foot (nested outward)
+                          let cumRow = 1;
                           r0.cols.forEach((col, i) => {
-                            if (i > 0 && i < r0.cols.length - 1) {
+                            if (i > 0) {
                               const dist = fm.pxIn(col.x - fm.arrayLeftX);
-                              elems.push(hDim(fm.arrayLeftX, col.x, cumY + 14, `${fracIn(dist)}"`, false, ff));
+                              elems.push(hDim(fm.arrayLeftX, col.x, chainY - step * cumRow, `X: ${fracIn(dist)}"`, true, ff));
+                              cumRow++;
                             }
                           });
+
+                          // Outermost: total array width
+                          elems.push(hDim(fm.arrayLeftX, fm.arrayRightX, chainY - step * cumRow, `${fracIn(fm.totalWidthIn)}"`, true, ff));
+
                           return elems;
                         })()}
+
+                        {/* ── Nested vertical dimensions on LEFT side ── */}
+                        {fm.rows.length > 0 && (() => {
+                          const leftX = fm.arrayLeftX;
+                          const topY = fm.arrayTopY;
+                          const step = 14;
+                          const elems = [];
+
+                          // Innermost (closest to array): local per-row dims for first row
+                          const dimX0 = leftX;
+                          elems.push(vDim(r0.y0, r0.ry1, dimX0, `${fracIn(r0.topIn)}"`, true, ff));
+                          elems.push(vDim(r0.ry1, r0.ry2, dimX0 - step, `${fracIn(r0.railGapIn)}"`, true, ff));
+                          elems.push(vDim(r0.ry2, r0.y0 + r0.modRects[0].h, dimX0, `${fracIn(r0.botIn)}"`, true, ff));
+
+                          // Cumulative Y dims: from array top to each row's rail positions
+                          let cumCol = 2; // start after local dims columns
+                          fm.rows.forEach((row, ri) => {
+                            const xOff = leftX - step * (cumCol + 1);
+                            elems.push(vDim(topY, row.ry1, xOff, `Y: ${fracIn(row.cumRy1)}"`, true, ff));
+                            elems.push(vDim(topY, row.ry2, xOff - step, `Y: ${fracIn(row.cumRy2)}"`, true, ff));
+                            cumCol += 2;
+                          });
+
+                          // Outermost: total array height
+                          elems.push(vDim(fm.arrayTopY, fm.arrayBotY, leftX - step * (cumCol + 1), `${fracIn(fm.totalHeightIn)}"`, true, ff));
+
+                          return elems;
+                        })()}
+
                       </svg>
 
                       <div style={{ fontFamily: ff, fontSize: 9, color: td, marginTop: 4 }}>
