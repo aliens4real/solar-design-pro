@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canopy Solar — Entry-Level Installer Training Manual</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --accent: #d48c00;
+    --accent-light: #fef3d0;
+    --dark: #1a1a2e;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --red-50: #fef2f2;
+    --red-600: #dc2626;
+    --red-700: #b91c1c;
+    --yellow-50: #fffbeb;
+    --yellow-600: #d97706;
+    --blue-50: #eff6ff;
+    --blue-600: #2563eb;
+    --green-50: #f0fdf4;
+    --green-700: #15803d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: var(--gray-800);
+    background: #fff;
+  }
+
+  /* ── Print styles ── */
+  @media print {
+    body { font-size: 10pt; }
+    .no-print { display: none !important; }
+    .page-break { page-break-before: always; }
+    .avoid-break { page-break-inside: avoid; }
+    h2 { page-break-before: always; }
+    h2:first-of-type { page-break-before: auto; }
+    .cover-page { page-break-after: always; }
+    table { page-break-inside: avoid; }
+    @page { margin: 0.75in; size: letter; }
+  }
+
+  /* ── Layout ── */
+  .manual {
+    max-width: 8.5in;
+    margin: 0 auto;
+    padding: 0.75in;
+  }
+
+  /* ── Cover page ── */
+  .cover-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 9in;
+    text-align: center;
+    border: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 2in 1in;
+    margin-bottom: 2rem;
+  }
+
+  .cover-logo {
+    width: 200px;
+    height: auto;
+    margin-bottom: 2rem;
+  }
+
+  .cover-icon {
+    font-size: 80px;
+    margin-bottom: 1.5rem;
+    color: var(--accent);
+  }
+
+  .cover-company {
+    font-size: 28pt;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+    margin-bottom: 0.25rem;
+  }
+
+  .cover-tagline {
+    font-size: 12pt;
+    color: var(--gray-600);
+    margin-bottom: 2rem;
+  }
+
+  .cover-title {
+    font-size: 22pt;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+    line-height: 1.3;
+  }
+
+  .cover-subtitle {
+    font-size: 14pt;
+    color: var(--gray-600);
+    margin-bottom: 3rem;
+  }
+
+  .cover-meta {
+    font-size: 10pt;
+    color: var(--gray-600);
+    line-height: 1.8;
+  }
+
+  .cover-meta strong { color: var(--gray-800); }
+
+  .cover-bar {
+    width: 120px;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 2px;
+    margin: 1.5rem 0;
+  }
+
+  /* ── Headings ── */
+  h2 {
+    font-size: 20pt;
+    font-weight: 800;
+    color: var(--dark);
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 3px solid var(--accent);
+  }
+
+  h3 {
+    font-size: 14pt;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  h4 {
+    font-size: 12pt;
+    font-weight: 600;
+    color: var(--accent);
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* ── Body text ── */
+  p { margin-bottom: 0.75rem; }
+
+  ul, ol {
+    margin-bottom: 0.75rem;
+    padding-left: 1.5rem;
+  }
+
+  li { margin-bottom: 0.35rem; }
+
+  strong { color: var(--gray-900); }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 10pt;
+  }
+
+  th {
+    background: var(--dark);
+    color: #fff;
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 12px;
+  }
+
+  td {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  tr:nth-child(even) td { background: var(--gray-50); }
+
+  /* ── Callout boxes ── */
+  .callout {
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+    border-left: 4px solid;
+  }
+
+  .callout-danger {
+    background: var(--red-50);
+    border-color: var(--red-600);
+  }
+
+  .callout-danger .callout-title { color: var(--red-700); }
+
+  .callout-warning {
+    background: var(--yellow-50);
+    border-color: var(--yellow-600);
+  }
+
+  .callout-warning .callout-title { color: var(--yellow-600); }
+
+  .callout-info {
+    background: var(--blue-50);
+    border-color: var(--blue-600);
+  }
+
+  .callout-info .callout-title { color: var(--blue-600); }
+
+  .callout-tip {
+    background: var(--green-50);
+    border-color: var(--green-700);
+  }
+
+  .callout-tip .callout-title { color: var(--green-700); }
+
+  .callout-title {
+    font-weight: 700;
+    font-size: 10pt;
+    margin-bottom: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ── Diagram boxes ── */
+  .diagram {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    border-radius: 6px;
+    padding: 1.25rem;
+    margin: 1rem 0;
+    font-family: 'Courier New', monospace;
+    font-size: 9pt;
+    line-height: 1.4;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  .diagram-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 9pt;
+    color: var(--gray-600);
+    text-align: center;
+    margin-top: 0.35rem;
+    font-style: italic;
+  }
+
+  /* ── Checklist ── */
+  .checklist {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .checklist li {
+    padding-left: 1.75rem;
+    position: relative;
+    margin-bottom: 0.4rem;
+  }
+
+  .checklist li::before {
+    content: "☐";
+    position: absolute;
+    left: 0;
+    font-size: 13pt;
+    line-height: 1.3;
+    color: var(--gray-600);
+  }
+
+  /* ── Timeline ── */
+  .timeline {
+    border-left: 3px solid var(--accent);
+    padding-left: 1.5rem;
+    margin: 1rem 0;
+  }
+
+  .timeline-item {
+    margin-bottom: 0.75rem;
+    position: relative;
+  }
+
+  .timeline-item::before {
+    content: "";
+    width: 12px;
+    height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    position: absolute;
+    left: -1.85rem;
+    top: 4px;
+  }
+
+  .timeline-time {
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 10pt;
+  }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 1.5rem 2rem;
+    margin: 1.5rem 0;
+  }
+
+  .toc h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--dark);
+  }
+
+  .toc ol {
+    list-style: none;
+    padding-left: 0;
+    counter-reset: toc;
+  }
+
+  .toc > ol > li {
+    counter-increment: toc;
+    margin-bottom: 0.35rem;
+    font-weight: 500;
+  }
+
+  .toc > ol > li::before {
+    content: counter(toc) ".";
+    color: var(--accent);
+    font-weight: 700;
+    margin-right: 0.5rem;
+    display: inline-block;
+    width: 1.5rem;
+  }
+
+  /* ── Footer ── */
+  .page-footer {
+    text-align: center;
+    font-size: 8pt;
+    color: var(--gray-600);
+    border-top: 1px solid var(--gray-200);
+    padding-top: 0.75rem;
+    margin-top: 2rem;
+  }
+
+  /* ── Columns ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 600px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="manual">
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- COVER PAGE                                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="cover-page">
+  <div class="cover-icon">☀️</div>
+  <div class="cover-company">CANOPY SOLAR</div>
+  <div class="cover-tagline">Reliable Solar, Built Right</div>
+  <div class="cover-bar"></div>
+  <div class="cover-title">Entry-Level Installer<br>Training Manual</div>
+  <div class="cover-subtitle">Residential &amp; Commercial PV System Installation</div>
+  <div class="cover-bar"></div>
+  <div class="cover-meta">
+    <strong>Version 1.0</strong> — March 2026<br>
+    Covers: Comp Shingle, Flat Roof, Ground Mount, Carport<br>
+    String Inverters (SMA / Fronius) &amp; Microinverters (Enphase IQ8)<br><br>
+    <strong>CONFIDENTIAL</strong> — For Canopy Solar employees only
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- TABLE OF CONTENTS                                       -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="toc page-break">
+  <h3>Table of Contents</h3>
+  <ol>
+    <li>How Solar PV Systems Work</li>
+    <li>Safety First</li>
+    <li>Tools &amp; Equipment Checklist</li>
+    <li>Pre-Installation</li>
+    <li>Racking Installation</li>
+    <li>Module Installation</li>
+    <li>Electrical — Conduit &amp; Wiring</li>
+    <li>Inverter Installation</li>
+    <li>Inspection &amp; Commissioning</li>
+    <li>Typical Installation Timeline</li>
+    <li>Common Mistakes &amp; Troubleshooting</li>
+    <li>NEC Quick Reference</li>
+    <li>Appendix: Torque Specs &amp; Hardware Reference</li>
+  </ol>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 1: HOW SOLAR PV SYSTEMS WORK                    -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>1. How Solar PV Systems Work</h2>
+
+<h3>The Photovoltaic Effect</h3>
+<p>Solar panels (modules) convert sunlight directly into electricity through the <strong>photovoltaic effect</strong>. Each module contains dozens of silicon cells. When photons from sunlight hit a cell, they knock electrons free from atoms in the silicon, creating a flow of electric current. This current is <strong>direct current (DC)</strong> — it flows in one direction, like a battery.</p>
+
+<p>Key facts about module output:</p>
+<ul>
+  <li>A typical residential module produces <strong>400–450 watts</strong> of DC power under ideal conditions (STC: 1000 W/m² irradiance, 25°C cell temperature)</li>
+  <li>Real-world output is usually <strong>75–85%</strong> of STC rating due to temperature, soiling, shading, and other losses</li>
+  <li>Output voltage per module is approximately <strong>30–50 VDC</strong> (open-circuit voltage, Voc)</li>
+  <li>Modules produce power <strong>whenever sunlight hits them</strong> — they cannot be "turned off" like a light switch</li>
+</ul>
+
+<div class="callout callout-danger">
+  <div class="callout-title">⚡ Critical Safety Concept</div>
+  <p>DC voltage is present on module wiring any time the sun is up. Even on cloudy days, modules produce significant voltage. Always treat module wiring as energized during daylight hours.</p>
+</div>
+
+<h3>System Architecture: From Sunlight to Grid</h3>
+<p>Every grid-tied solar system follows this basic energy flow:</p>
+
+<div class="diagram">  SUNLIGHT
+     │
+     ▼
+┌──────────┐    DC     ┌───────────┐   AC    ┌──────────┐    ┌──────┐
+│  SOLAR   │──────────▶│ INVERTER  │────────▶│  MAIN    │───▶│ GRID │
+│  MODULES │  (strings)│ (DC→AC)   │(240VAC) │  PANEL   │    │      │
+└──────────┘           └───────────┘         └──────────┘    └──────┘
+     │                       │                     │
+  Racking               AC Disconnect         Net Meter
+  + Wiring               (safety)           (tracks export)
+</div>
+<p class="diagram-label">Figure 1-1: Basic grid-tied solar system energy flow</p>
+
+<h3>String Inverter vs. Microinverter Architecture</h3>
+<p>The two most common residential configurations:</p>
+
+<h4>String Inverter (SMA Sunny Boy / Fronius Primo GEN24)</h4>
+<p>Multiple modules are wired <strong>in series</strong> (positive-to-negative, like batteries in a flashlight) to form a "string." The string's DC voltage adds up — for example, 12 modules at ~40V each = ~480V DC. This high-voltage DC string runs through conduit down to a <strong>single centralized inverter</strong> mounted on the wall near the main panel. The inverter converts all the DC to 240V AC.</p>
+
+<div class="diagram">  Module─Module─Module─Module─Module─Module   (String 1: ~240V DC)
+    ┌──────────────────────────────────────┘
+    │         ┌──────────┐     ┌───────┐     ┌───────┐
+    └────────▶│ STRING   │────▶│  AC   │────▶│ MAIN  │
+              │ INVERTER │ AC  │DISCON │     │ PANEL │
+    ┌────────▶│(wall mt) │     └───────┘     └───────┘
+    │         └──────────┘
+    └──────────────────────────────────────┐
+  Module─Module─Module─Module─Module─Module   (String 2: ~240V DC)
+</div>
+<p class="diagram-label">Figure 1-2: String inverter — modules in series, one central inverter</p>
+
+<ul>
+  <li><strong>Pros:</strong> Lower cost, fewer components, easier troubleshooting</li>
+  <li><strong>Cons:</strong> Shade on one module affects the whole string; requires external rapid shutdown devices (NEC 690.12)</li>
+</ul>
+
+<h4>Microinverter (Enphase IQ8)</h4>
+<p>Each module has its own <strong>small inverter mounted underneath it</strong>. DC-to-AC conversion happens at the module level. The microinverters connect to a pre-wired <strong>Q Cable trunk</strong> that carries 240V AC down to an <strong>IQ Combiner</strong> or <strong>IQ Gateway</strong> near the panel.</p>
+
+<div class="diagram">  Module──┐  Module──┐  Module──┐  Module──┐
+         │         │         │         │
+      [IQ8μ]    [IQ8μ]    [IQ8μ]    [IQ8μ]    (each micro: DC→AC)
+         │         │         │         │
+    ─────┴────┬────┴────┬────┴────┬────┘
+              │   Q Cable (AC trunk, 240V)
+              ▼
+        ┌───────────┐     ┌───────┐
+        │ IQ COMBINER│───▶│ MAIN  │
+        │ /GATEWAY   │    │ PANEL │
+        └───────────┘    └───────┘
+</div>
+<p class="diagram-label">Figure 1-3: Microinverter — per-module conversion, Q Cable trunk</p>
+
+<ul>
+  <li><strong>Pros:</strong> Module-level optimization (shade tolerant), inherent rapid shutdown compliance, per-panel monitoring</li>
+  <li><strong>Cons:</strong> Higher cost per watt, more components on roof, Q Cable routing</li>
+</ul>
+
+<h3>Key System Components</h3>
+<table>
+  <tr><th>Component</th><th>Purpose</th><th>Location</th></tr>
+  <tr><td><strong>Solar Modules</strong></td><td>Convert sunlight to DC electricity</td><td>Roof / Ground / Carport</td></tr>
+  <tr><td><strong>Racking</strong> (rails, clamps, mounts)</td><td>Secure modules to structure</td><td>Roof / Ground / Carport</td></tr>
+  <tr><td><strong>Inverter</strong></td><td>Convert DC to AC power</td><td>Wall (string) or under modules (micro)</td></tr>
+  <tr><td><strong>Conduit &amp; Wiring</strong></td><td>Route power between components</td><td>Roof, exterior walls, interior</td></tr>
+  <tr><td><strong>AC Disconnect</strong></td><td>Safety shut-off for utility/fire dept</td><td>Near inverter or meter</td></tr>
+  <tr><td><strong>Main Panel</strong></td><td>Connects solar to home electrical system</td><td>Garage or exterior wall</td></tr>
+  <tr><td><strong>Net Meter</strong></td><td>Tracks energy imported/exported</td><td>Utility meter base</td></tr>
+  <tr><td><strong>Monitoring</strong></td><td>Tracks system production remotely</td><td>Cloud-based (app/web)</td></tr>
+</table>
+
+<h3>Net Metering</h3>
+<p>Most residential solar systems are <strong>grid-tied with net metering</strong>. When the system produces more power than the home uses, excess electricity flows backward through the meter to the grid, and the homeowner receives a credit. At night or during cloudy periods, the home draws power from the grid normally. The customer pays only for their <strong>net</strong> consumption.</p>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 2: SAFETY FIRST                                 -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 class="page-break">2. Safety First</h2>
+
+<div class="callout callout-danger">
+  <div class="callout-title">⚡ #1 Rule of Solar Installation</div>
+  <p>Solar modules produce DC electricity whenever exposed to light. <strong>You cannot de-energize them during daylight.</strong> A typical residential string can produce 300–600 VDC — enough to cause serious injury or death. Respect the voltage at all times.</p>
+</div>
+
+<h3>Electrical Hazards</h3>
+<ul>
+  <li><strong>DC shock risk:</strong> DC voltage is always present on exposed module leads and MC4 connectors when the sun is up. Even 30V DC can be dangerous in wet conditions.</li>
+  <li><strong>Arc flash:</strong> High-voltage DC arcs are sustained and extremely hot. Unlike AC, DC arcs do not self-extinguish at zero-crossing. Never disconnect DC connectors under load.</li>
+  <li><strong>AC hazards:</strong> When working near the main panel, service entrance, or inverter AC side, 240V AC is present. Always de-energize AC circuits at the breaker before making connections.</li>
+  <li><strong>Ground faults:</strong> Damaged insulation, pinched wires, or water intrusion can create ground fault paths through your body. Use insulated tools and gloves.</li>
+</ul>
+
+<h3>Fall Protection &amp; Roof Safety</h3>
+<p>Falls from height are the <strong>leading cause of death</strong> in construction. OSHA requires fall protection at 6 feet or more in construction (29 CFR 1926.501).</p>
+<ul>
+  <li><strong>Harness:</strong> Full-body harness with dorsal D-ring, properly fitted and inspected before each use</li>
+  <li><strong>Anchor:</strong> Roof anchor rated for 5,000 lbs, fastened to structural member (rafter or truss)</li>
+  <li><strong>Lanyard/rope grab:</strong> Self-retracting lifeline (SRL) or rope grab system. Max free-fall distance: 6 feet.</li>
+  <li><strong>Ladder safety:</strong> 3-point contact at all times, extend 3 feet above roof edge, secure at top and bottom, 4:1 pitch ratio</li>
+  <li><strong>Roof conditions:</strong> Check for wet/icy surfaces, loose shingles, rotted decking, skylights, and power lines before stepping on the roof</li>
+  <li><strong>Perimeter awareness:</strong> Never work within 6 feet of an unprotected roof edge without fall protection engaged</li>
+</ul>
+
+<h3>Required PPE</h3>
+<table>
+  <tr><th>Equipment</th><th>When Required</th><th>Standard</th></tr>
+  <tr><td>Hard hat (Type I, Class E)</td><td>All times on job site</td><td>ANSI Z89.1</td></tr>
+  <tr><td>Safety glasses (clear/tinted)</td><td>All times</td><td>ANSI Z87.1</td></tr>
+  <tr><td>Leather/rubber gloves</td><td>Handling modules, wiring, hardware</td><td>ASTM F696 (electrical)</td></tr>
+  <tr><td>Full-body harness + lanyard</td><td>Roof work (>6 ft)</td><td>ANSI Z359.1</td></tr>
+  <tr><td>Steel/composite-toe boots</td><td>All times on job site</td><td>ASTM F2413</td></tr>
+  <tr><td>High-visibility vest</td><td>Ground-level work near traffic</td><td>ANSI 107</td></tr>
+  <tr><td>Hearing protection</td><td>Power tool use (drill, saw, grinder)</td><td>ANSI S3.19</td></tr>
+  <tr><td>Knee pads</td><td>Roof work (recommended)</td><td>—</td></tr>
+</table>
+
+<h3>Lockout/Tagout (LOTO)</h3>
+<p>Before making any electrical connection on the AC side:</p>
+<ol>
+  <li>Turn OFF the AC disconnect switch</li>
+  <li>Turn OFF the solar breaker at the main panel</li>
+  <li>Apply your personal lock and tag to both disconnects</li>
+  <li>Verify zero energy with a multimeter (test L1-N, L2-N, L1-L2)</li>
+  <li>Only then proceed with wiring</li>
+</ol>
+
+<div class="callout callout-warning">
+  <div class="callout-title">⚠️ DC Cannot Be Locked Out</div>
+  <p>There is no way to fully lock out DC from solar modules during daylight. Cover modules with opaque tarps if you must work on DC wiring, or wait until dark. Even covered modules may produce residual voltage.</p>
+</div>
+
+<h3>Heat Illness Prevention</h3>
+<p>Solar installation often means working on hot roofs in direct sun:</p>
+<ul>
+  <li><strong>Hydrate:</strong> Drink water every 15–20 minutes, even if not thirsty. Minimum 1 quart per hour in hot conditions.</li>
+  <li><strong>Shade breaks:</strong> 10-minute shade break every hour when temperatures exceed 85°F</li>
+  <li><strong>Buddy system:</strong> Watch crew members for signs of heat exhaustion: heavy sweating, weakness, nausea, dizziness, fast pulse</li>
+  <li><strong>Acclimatization:</strong> New workers need a 2-week ramp-up period for hot conditions</li>
+  <li><strong>Roof temperature:</strong> Comp shingle roofs can reach <strong>150–170°F</strong> on sunny days. Wear knee pads and avoid prolonged kneeling.</li>
+</ul>
+
+<h3>Tool Safety</h3>
+<ul>
+  <li>Inspect power tools before each use — check cords, guards, bits</li>
+  <li>Use the right tool for the job — never use a screwdriver as a pry bar</li>
+  <li>Secure tools when on the roof — a dropped impact driver can injure someone below</li>
+  <li>Keep cutting tools sharp — dull blades cause more injuries than sharp ones</li>
+  <li>Never carry tools while climbing a ladder — use a tool belt or haul bucket</li>
+</ul>
+
+<h3>Emergency Procedures</h3>
+<ol>
+  <li><strong>Electrical shock:</strong> Do NOT touch the victim while they're in contact with the source. Disconnect power if possible. Call 911. Begin CPR if the victim is unresponsive.</li>
+  <li><strong>Fall:</strong> Do not move the victim (possible spinal injury). Call 911. Keep them calm and still.</li>
+  <li><strong>Fire:</strong> DC-related fires cannot be extinguished with water. Use a Class C or ABC extinguisher. Evacuate and call the fire department.</li>
+  <li><strong>Severe weather:</strong> Lightning = immediately descend from roof. Monitor weather forecasts before starting work.</li>
+</ol>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 3: TOOLS & EQUIPMENT                            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 class="page-break">3. Tools &amp; Equipment Checklist</h2>
+
+<p>Every installer should have access to the following tools. Your truck should be stocked and checked before leaving the shop each morning.</p>
+
+<h3>Power Tools</h3>
+<table>
+  <tr><th>Tool</th><th>Primary Use</th><th>Notes</th></tr>
+  <tr><td>Impact driver (1/4" hex)</td><td>Lag bolts into rafters, hardware assembly</td><td>Most-used tool on the job. Carry 2 batteries.</td></tr>
+  <tr><td>Hammer drill / SDS rotary hammer</td><td>Concrete anchors (ground mount, stucco)</td><td>Needed for masonry penetrations</td></tr>
+  <tr><td>Circular saw (metal blade)</td><td>Cutting rail to length</td><td>Use aluminum-rated carbide blade</td></tr>
+  <tr><td>Angle grinder (4.5")</td><td>Cutting conduit, rail, deburring</td><td>Metal cut-off wheel + flap disc</td></tr>
+  <tr><td>Reciprocating saw</td><td>Cutting strut, pipe, misc.</td><td>Metal blade, variable speed</td></tr>
+  <tr><td>Cordless drill</td><td>Pilot holes, sheet metal screws</td><td>Separate from impact driver</td></tr>
+</table>
+
+<h3>Hand Tools</h3>
+<table>
+  <tr><th>Tool</th><th>Primary Use</th></tr>
+  <tr><td>10mm combination wrench / socket</td><td>UFO clamp tightening, rail hardware</td></tr>
+  <tr><td>Torque wrench (in-lb range: 40–120)</td><td>Clamp torque verification (UFO: 80 in-lb)</td></tr>
+  <tr><td>Adjustable wrench (8" and 12")</td><td>Conduit fittings, locknuts</td></tr>
+  <tr><td>Channel-lock pliers (10")</td><td>Conduit connectors, locknuts</td></tr>
+  <tr><td>Wire strippers (10–6 AWG)</td><td>Stripping THWN-2, USE-2 wire</td></tr>
+  <tr><td>MC4 crimper (Amphenol/Multi-Contact)</td><td>Making MC4 connections (field crimp only)</td></tr>
+  <tr><td>MC4 disconnect tool (spanner wrench)</td><td>Separating MC4 connectors safely</td></tr>
+  <tr><td>Lineman's pliers</td><td>Pulling wire, cutting, twisting</td></tr>
+  <tr><td>Needle-nose pliers</td><td>Terminal work, tight spaces</td></tr>
+  <tr><td>Utility knife</td><td>Stripping wire, opening boxes, cutting flashing sealant</td></tr>
+  <tr><td>Tin snips (left/right/straight)</td><td>Cutting flashing, sheet metal</td></tr>
+  <tr><td>Flat/Phillips screwdrivers</td><td>Terminal screws, cover plates</td></tr>
+  <tr><td>Pry bar / flat bar</td><td>Lifting shingles for FlashFoot2 install</td></tr>
+  <tr><td>Caulk gun</td><td>Sealant application</td></tr>
+</table>
+
+<h3>Measuring &amp; Layout</h3>
+<table>
+  <tr><th>Tool</th><th>Primary Use</th></tr>
+  <tr><td>Tape measure (25 ft minimum)</td><td>All measurements — rails, conduit runs, spacing</td></tr>
+  <tr><td>Magnetic stud finder</td><td>Locating rafters through sheathing and shingles</td></tr>
+  <tr><td>Chalk line</td><td>Snapping straight lines for rail alignment</td></tr>
+  <tr><td>Torpedo level (9")</td><td>Checking conduit level, equipment plumb</td></tr>
+  <tr><td>Speed square</td><td>Marking cuts, checking angles</td></tr>
+  <tr><td>EMT conduit bender (1/2", 3/4")</td><td>Bending EMT conduit — 90s, offsets, kicks</td></tr>
+  <tr><td>Pencil / marker (silver Sharpie for dark surfaces)</td><td>Marking layout, cut lines</td></tr>
+</table>
+
+<h3>Safety Equipment</h3>
+<ul class="checklist">
+  <li>Full-body harness with dorsal D-ring</li>
+  <li>Roof anchor (reusable, rated 5,000 lbs)</li>
+  <li>Self-retracting lifeline (SRL) or rope grab + lifeline</li>
+  <li>Hard hat (Class E — electrical rated)</li>
+  <li>Safety glasses (clear + tinted)</li>
+  <li>Leather work gloves + electrical-rated rubber gloves</li>
+  <li>Steel-toe boots with good tread</li>
+  <li>Knee pads</li>
+  <li>First aid kit</li>
+  <li>Fire extinguisher (ABC rated)</li>
+  <li>Sunscreen, water, shade structure</li>
+</ul>
+
+<h3>Electrical Test Equipment</h3>
+<table>
+  <tr><th>Tool</th><th>Use</th><th>Key Specs</th></tr>
+  <tr><td>Digital multimeter (DMM)</td><td>Measure DC voltage, AC voltage, continuity</td><td>CAT III 600V minimum</td></tr>
+  <tr><td>Clamp meter</td><td>Measure DC/AC current without breaking circuit</td><td>DC-capable required for solar</td></tr>
+  <tr><td>Insulation resistance tester (megger)</td><td>Test wire insulation integrity</td><td>500V/1000V test voltage</td></tr>
+  <tr><td>Non-contact voltage tester (tick tracer)</td><td>Quick AC presence check</td><td>Not reliable for DC — use DMM</td></tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 4: PRE-INSTALLATION                             -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 class="page-break">4. Pre-Installation</h2>
+
+<h3>Site Assessment Review</h3>
+<p>Before showing up to install, review the design package from Solar Design Pro. Know the answers to these questions:</p>
+<ul>
+  <li><strong>Roof type:</strong> Comp shingle? Tile? Metal? (Determines attachment hardware)</li>
+  <li><strong>Roof pitch:</strong> Affects safety requirements and racking approach</li>
+  <li><strong>Shade:</strong> Any obstructions — trees, vents, chimneys, neighboring structures?</li>
+  <li><strong>Structural:</strong> Rafter spacing (typically 16" or 24" o.c.), rafter size, any engineering concerns?</li>
+  <li><strong>Electrical:</strong> Main panel location, service size (100A/200A), available breaker spaces, meter location</li>
+  <li><strong>Access:</strong> Where can we place ladders? Driveway access for truck? Gate codes?</li>
+  <li><strong>Permit conditions:</strong> Any special requirements from the building department?</li>
+</ul>
+
+<h3>Reading the Installation Plan</h3>
+<p>The Solar Design Pro output includes:</p>
+<ol>
+  <li><strong>Module layout</strong> — exact panel positions on the roof, orientation (portrait/landscape), number of panels per row</li>
+  <li><strong>String configuration</strong> — which modules are wired together, string voltage and current calculations</li>
+  <li><strong>Electrical elevation diagram</strong> — shows equipment placement, conduit routing, wire sizes, and connections</li>
+  <li><strong>Pack list (BOM)</strong> — complete material list with quantities for every component</li>
+</ol>
+
+<div class="callout callout-tip">
+  <div class="callout-title">💡 Pro Tip</div>
+  <p>Print the module layout and electrical elevation diagram. Tape them inside your truck toolbox lid for quick reference throughout the day. A laminated copy on the roof saves trips up and down the ladder.</p>
+</div>
+
+<h3>Material Staging &amp; Truck Loading</h3>
+<p>Load the truck the afternoon before, using the pack list as your checklist:</p>
+
+<h4>Loading Order (bottom to top of truck bed)</h4>
+<ol>
+  <li><strong>Rails</strong> (heaviest, longest items — lay flat on bottom, extend over tailgate if needed, flag the ends)</li>
+  <li><strong>Modules</strong> (stack flat on foam, never on edge, max 20 per stack per manufacturer guidelines)</li>
+  <li><strong>Conduit</strong> (bundle with strap, 10-ft sticks)</li>
+  <li><strong>Racking hardware</strong> (FlashFoot2s, clamps, bolts — in labeled bins)</li>
+  <li><strong>Electrical</strong> (wire spools, disconnect, roof box, inverter — box separate)</li>
+  <li><strong>Tools &amp; safety gear</strong> (accessible on top)</li>
+</ol>
+
+<h3>Verifying the BOM</h3>
+<p>At the shop, before loading:</p>
+<ul class="checklist">
+  <li>Count rails — correct lengths and quantity?</li>
+  <li>Count FlashFoot2s — matches pack list?</li>
+  <li>Count mid clamps + end clamps — correct for panel count?</li>
+  <li>Verify wire spools — correct gauge and sufficient length?</li>
+  <li>Conduit sticks — enough for all runs?</li>
+  <li>Fittings bag — connectors, locknuts, bushings, straps, LBs?</li>
+  <li>Inverter — correct model? Verify nameplate.</li>
+  <li>Disconnect — correct amperage rating?</li>
+  <li>Roof box (SolaDeck) — correct model for voltage? Terminal blocks inside?</li>
+  <li>Grounding — ground rods, acorn clamps, grounding wire spool?</li>
+</ul>
+
+<h3>Pre-Job Safety Briefing</h3>
+<p>Every morning, before anyone climbs a ladder, the crew lead conducts a 5-minute safety briefing:</p>
+<ol>
+  <li>Identify the day's hazards (roof pitch, electrical, weather, obstacles)</li>
+  <li>Review fall protection plan — anchor locations, harness inspection</li>
+  <li>Assign roles (who's on roof, who's ground support)</li>
+  <li>Confirm emergency contacts and nearest hospital</li>
+  <li>Weather check — any rain, lightning, or extreme heat expected?</li>
+</ol>
+
+<h3>Roof Access &amp; Ladder Setup</h3>
+<ul>
+  <li>Set up the extension ladder on firm, level ground. Use leg levelers if needed.</li>
+  <li>Extend at least <strong>3 feet above the roof edge</strong> (3 rungs)</li>
+  <li>Angle: <strong>4:1 ratio</strong> (for every 4 feet of height, the base is 1 foot from the wall)</li>
+  <li>Secure the top with a ladder stabilizer or tie-off strap</li>
+  <li>Secure the base — stake it, have someone foot it, or use anti-slip pads</li>
+  <li>First person up installs the roof anchor and connects their fall protection <strong>immediately</strong></li>
+</ul>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 5: RACKING INSTALLATION                         -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 class="page-break">5. Racking Installation</h2>
+
+<p>The racking system is the structural foundation for every solar array. Proper installation is critical for safety, waterproofing, and long-term performance. Canopy Solar primarily uses <strong>IronRidge XR100 rails</strong> for residential and <strong>XR1000 rails</strong> for commercial and ground mount.</p>
+
+<h3>5.1 Comp Shingle Residential (FlashFoot2 + XR100)</h3>
+<p>This is the most common install type. The IronRidge FlashFoot2 is an integrated flashing + L-foot that attaches the rail to the roof through the sheathing and into the rafter below.</p>
+
+<h4>Step 1: Find and Mark Rafters</h4>
+<ol>
+  <li>Use a <strong>magnetic stud finder</strong> on the roof surface to locate rafters (the magnet picks up nails in the rafter)</li>
+  <li>Confirm rafter spacing — typically <strong>16" or 24"</strong> on center</li>
+  <li>Mark rafter centerlines with chalk or a pencil. Snap a chalk line along each rafter that will receive an attachment point.</li>
+  <li>Verify by probing with a small drill bit through the shingle if unsure — you must hit solid wood</li>
+</ol>
+
+<div class="callout callout-danger">
+  <div class="callout-title">⚡ Never Miss a Rafter</div>
+  <p>Every FlashFoot2 lag bolt MUST hit a rafter or engineered truss member. Lag bolts into sheathing only (no rafter) have virtually zero pullout strength. A "toggle bolt" or "molly bolt" is NOT an acceptable substitute. If you miss a rafter, remove the lag, seal the hole, and find the correct rafter location.</p>
+</div>
+
+<h4>Step 2: Layout FlashFoot2 Positions</h4>
+<ol>
+  <li>Refer to the design plan for rail positions and attachment spacing</li>
+  <li>Mark FlashFoot2 positions along each rail line, centered on rafters</li>
+  <li>Typical spacing: <strong>48"–72"</strong> between FlashFoot2s on XR100 (per IronRidge Design Assistant output)</li>
+  <li>Maximum overhang past the last FlashFoot2: no more than <strong>6 inches</strong> of rail past the last attachment</li>
+  <li>Rail spacing between top and bottom rails: approximately <strong>2/3 of the module's long dimension</strong> in portrait orientation (e.g., ~67" for a standard 2102mm module)</li>
+</ol>
+
+<h4>Step 3: Install FlashFoot2s</h4>
+<ol>
+  <li>Lift the shingle course with a flat bar</li>
+  <li>Slide the FlashFoot2 flashing <strong>under the upper shingle course</strong>, centered on the rafter mark</li>
+  <li>The L-foot points upward, perpendicular to the roof surface</li>
+  <li>Drive the <strong>5/16" x 4" stainless steel lag bolt</strong> (included) into the rafter using an impact driver with a 5/16" hex socket. The lag must penetrate a minimum of <strong>2.5 inches into the rafter</strong>.</li>
+  <li>Verify the FlashFoot2 is snug against the roof and the flashing is sealed under the shingles</li>
+  <li>Apply sealant (included) over the bolt head and under any exposed flashing edges</li>
+</ol>
+
+<h4>Step 4: Install Rails</h4>
+<ol>
+  <li>Lift rails to the roof using a rope/pulley or hand-over-hand with a helper</li>
+  <li>Set the rail on the FlashFoot2 L-feet, seating it in the channel</li>
+  <li>Slide a <strong>T-bolt + flange nut</strong> into the rail channel at each L-foot</li>
+  <li>Loosely tighten — enough to hold but still allow adjustment</li>
+  <li>Align rails using a chalk line or string line for straightness</li>
+  <li>Square the array — measure diagonals (they should be equal)</li>
+  <li>Final tighten all T-bolts to <strong>20 ft-lbs (240 in-lbs)</strong></li>
+</ol>
+
+<h4>Step 5: Splice Rails (if needed)</h4>
+<p>When a row of panels is longer than a single rail, use a <strong>BOSS Splice</strong> to join two rails end-to-end:</p>
+<ol>
+  <li>Slide the BOSS Splice into the T-slot channel, bridging the gap between two rail ends</li>
+  <li>Center the splice at the joint — equal amount inside each rail</li>
+  <li>The BOSS Splice is a bonded structural connection — it maintains full load capacity and electrical bonding</li>
+</ol>
+
+<h4>Step 6: Install Grounding Lugs</h4>
+<ol>
+  <li>Slide a <strong>rail grounding lug</strong> (XR-LUG-03-A1) into the T-slot of each rail (or each continuous rail run)</li>
+  <li>Position near the end of the rail closest to the conduit run to the ground rod</li>
+  <li>Torque the lug bolt per IronRidge specs</li>
+  <li>Later, you'll connect the grounding electrode conductor (#6 AWG bare copper) to these lugs</li>
+</ol>
+
+<h3>5.2 Flat Roof Commercial</h3>
+<p>Flat (low-slope) commercial roofs use either <strong>ballasted</strong> or <strong>mechanically attached</strong> tilt systems.</p>
+
+<h4>Ballasted System (IronRidge BX or Similar)</h4>
+<ul>
+  <li>No roof penetrations — the array is held in place by weight (concrete ballast blocks)</li>
+  <li>A chassis frame sets modules at <strong>5° or 10°</strong> tilt facing south</li>
+  <li>Ballast blocks (typically CMU blocks or poured concrete pans) are placed per the engineering layout</li>
+  <li>Weight varies by wind zone: <strong>3–5 lbs/sq ft</strong> of array area is typical</li>
+  <li>Requires a structural engineer to verify the roof can handle the added dead load</li>
+  <li>Rubber pads protect the roof membrane from abrasion</li>
+</ul>
+
+<h4>Attached Tilt Mount (IronRidge XR Tilt)</h4>
+<ul>
+  <li>When roof can't handle ballast weight or wind loads are too high, mechanically fasten to the roof deck</li>
+  <li>Uses <strong>XR1000 rails</strong> on <strong>fixed tilt legs</strong></li>
+  <li>Tilt legs adjust from 5°–30° depending on latitude</li>
+  <li>Attachments penetrate the roof membrane — requires proper flashing and sealant</li>
+</ul>
+
+<h3>5.3 Ground Mount</h3>
+<p>The IronRidge XR Ground Mount system uses <strong>XR1000 rails</strong> on locally sourced <strong>Schedule 40 steel pipe</strong>.</p>
+
+<h4>Foundation Options</h4>
+<table>
+  <tr><th>Method</th><th>Best For</th><th>Notes</th></tr>
+  <tr><td>Driven piles</td><td>Soil classes 2–4</td><td>Fastest install, no concrete. Use a hydraulic pile driver.</td></tr>
+  <tr><td>Concrete piers</td><td>Rocky/clay soil</td><td>Dig holes, set Sonotube, pour concrete, embed post bracket</td></tr>
+  <tr><td>Ground screws</td><td>Moderate soil</td><td>Helical screw driven into ground, immediate load capacity</td></tr>
+</table>
+
+<h4>Assembly Sequence</h4>
+<ol>
+  <li>Set post spacing per design: typically <strong>7.5' or 9'</strong> north-south between posts</li>
+  <li>Drive/set posts plumb using a post level</li>
+  <li>Install <strong>Top Caps</strong> (cast aluminum, 2" or 3" pipe) on each post — these accept the cross-pipe</li>
+  <li>Install horizontal <strong>cross-pipes</strong> (Schedule 40 steel) through the Top Caps</li>
+  <li>Mount <strong>XR1000 rails</strong> to the cross-pipes using the provided hardware</li>
+  <li>Install <strong>tilt legs</strong> to set the desired array angle (typically latitude tilt: 20°–35°)</li>
+  <li>Square and level the array</li>
+  <li>Install modules with UFO clamps (same process as roof mount)</li>
+</ol>
+
+<h3>5.4 Carport</h3>
+<p>Carport solar uses a <strong>steel canopy structure</strong> (typically W-beams or HSS tube steel columns with C-purlins) with rails mounted to the purlins.</p>
+<ul>
+  <li>Steel structure is engineered and fabricated separately — not an IronRidge product</li>
+  <li>Purlins (C-channel or Z-channel) run perpendicular to the modules</li>
+  <li>Mount <strong>XR100 or XR10 rails</strong> to purlins using <strong>L-feet + bolts through purlins</strong></li>
+  <li>Module installation and clamping is the same as roof mount</li>
+  <li>Typical carport height: <strong>12–15 ft</strong> clearance. Scissor lift or scaffolding required.</li>
+</ul>
+
+<h3>5.5 Clamp Installation (All Mount Types)</h3>
+
+<h4>UFO Mid Clamps</h4>
+<p>Secure two adjacent modules where they meet on the rail. Quantity: <strong>2 × (N − 1)</strong> per row where N is the number of panels.</p>
+<ol>
+  <li>Place the UFO clamp in the rail channel between two module frames</li>
+  <li>The clamp straddles both frame edges</li>
+  <li>Thread the integrated bolt down, engaging the T-slot</li>
+  <li>Torque to <strong>80 in-lbs</strong> (use a torque wrench — do NOT over-tighten by feel)</li>
+  <li>The UFO clamp has integrated UL 2703 grounding — the serrated contact surface bonds each module frame to the rail, eliminating the need for separate WEEB clips</li>
+</ol>
+
+<h4>EFO End Clamps (or UFO End Clamps)</h4>
+<p>Secure the outer edge of the first and last panel in each row. Quantity: <strong>4 per row</strong> (2 on each rail).</p>
+<ol>
+  <li>Slide the end clamp into the rail channel at the outer edge of the end module</li>
+  <li>Position so it grips the module frame from the outside</li>
+  <li>Torque to <strong>80 in-lbs</strong></li>
+</ol>
+
+<h4>End Stoppers</h4>
+<p>Small stops that slide into the rail slot at each end to prevent hardware from sliding off. Match to module frame thickness (30–40mm). Quantity: <strong>4 per row</strong>.</p>
+
+<h3>5.6 Torque Specifications</h3>
+<table>
+  <tr><th>Connection</th><th>Torque</th><th>Tool</th></tr>
+  <tr><td>UFO / EFO clamp bolt</td><td>80 in-lbs</td><td>Torque wrench + 10mm socket</td></tr>
+  <tr><td>FlashFoot2 lag bolt</td><td>Per manufacturer (drive until seated)</td><td>Impact driver + 5/16" hex</td></tr>
+  <tr><td>Rail-to-L-foot T-bolt</td><td>20 ft-lbs (240 in-lbs)</td><td>Torque wrench</td></tr>
+  <tr><td>BOSS Splice</td><td>Bonded, no additional torque required</td><td>—</td></tr>
+  <tr><td>Grounding lug set screw</td><td>35 in-lbs</td><td>Torque wrench</td></tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 6: MODULE INSTALLATION                          -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 class="page-break">6. Module Installation</h2>
+
+<h3>Handling &amp; Transport</h3>
+<ul>
+  <li>Modules are <strong>fragile glass</strong> — handle with care, avoid impacts, drops, and flexing</li>
+  <li><strong>Never set a module face-down on gravel, concrete, or rough surfaces</strong> — micro-cracks in the cells reduce output permanently</li>
+  <li>Store modules flat on foam or cardboard. Stack no more than <strong>20 modules</strong> per manufacturer guidelines.</li>
+  <li>When carrying, grip the frame edges — never carry by the junction box or cables</li>
+  <li>Use two people for modules over 45 lbs (most modern modules are 50–60 lbs)</li>
+  <li>On steep roofs, stage modules on the rail immediately — never lean them against anything unsecured</li>
+</ul>
+
+<div class="callout callout-warning">
+  <div class="callout-title">⚠️ Module Handling</div>
+  <p>Visible cracks or chips in the glass require module replacement. Even hairline cell cracks (invisible to the eye) degrade performance. Handle gently — this is expensive glass.</p>
+</div>
+
+<h3>Orientation: Portrait vs. Landscape</h3>
+<table>
+  <tr><th>Orientation</th><th>Description</th><th>When Used</th></tr>
+  <tr><td><strong>Portrait</strong></td><td>Long side vertical, short side along the rail</td><td>Most residential — simpler layout, fewer rails</td></tr>
+  <tr><td><strong>Landscape</strong></td><td>Long side horizontal, short side vertical</td><td>Low-slope commercial, height-constrained areas</td></tr>
+</table>
+<p>Always install in the orientation specified by the design plan. Mixing orientations affects string voltage calculations.</p>
+
+<h3>Setting Modules on Rails</h3>
+<ol>
+  <li>Start at one end of the row — typically the <strong>hardest-to-reach end first</strong> (farthest from ladder)</li>
+  <li>Place the module frame edges onto both rails, within the clamp zone marks</li>
+  <li>Slide the module against the end stopper or the previously installed module</li>
+  <li>Install the appropriate clamp:
+    <ul>
+      <li><strong>First module:</strong> Install an end clamp on the outside edge of both rails</li>
+      <li><strong>Subsequent modules:</strong> Install a mid clamp between the new module and the previous one on both rails</li>
+      <li><strong>Last module:</strong> Install the second end clamp on the outside edge of both rails</li>
+    </ul>
+  </li>
+  <li>Torque each clamp to <strong>80 in-lbs</strong> as you go</li>
+</ol>
+
+<h3>WEEB Grounding Clips</h3>
+<p>If using older (non-UFO) clamps that do not have integrated grounding, install a <strong>WEEB grounding clip</strong> (serrated bonding washer) at each clamp location. The WEEB bites through the anodized coating on both the module frame and the rail, creating an electrical bond.</p>
+<p>With current-generation <strong>UFO and EFO clamps</strong>, the integrated grounding pin eliminates the need for separate WEEB clips — the clamp itself provides UL 2703-listed bonding when torqued to spec.</p>
+
+<h3>MC4 Connectors</h3>
+<p>Each module has two pigtail cables with <strong>MC4 connectors</strong> (one positive, one negative). These snap together to form series strings.</p>
+<ol>
+  <li>Route the MC4 cables <strong>under the modules</strong>, along the rail channel</li>
+  <li>Connect the <strong>positive lead of one module to the negative lead of the next</strong> (series connection)</li>
+  <li>Push the MC4 male and female connectors together firmly until you hear/feel a <strong>click</strong></li>
+  <li>Tug-test each connection — a properly mated MC4 cannot be pulled apart by hand (requires the disconnect tool)</li>
+  <li>Avoid excess cable hanging below the array — use wire management clips</li>
+</ol>
+
+<div class="callout callout-danger">
+  <div class="callout-title">⚡ MC4 Safety</div>
+  <p>Never connect or disconnect MC4 connectors under load. MC4 connectors are NOT load-break rated. Disconnecting under load causes arcing that damages the connector and creates a fire hazard. Always verify zero current (cover modules or wait until dark) before separating MC4s.</p>
+</div>
+
+<h3>Wire Management</h3>
+<ul>
+  <li>Install <strong>wire management clips</strong> (IronRidge DCS-1307-5000) in the rail T-slot every <strong>3–4 feet</strong></li>
+  <li>Bundle MC4 cables and home-run conductors together neatly</li>
+  <li>NEC 690.31 requires PV source wiring to be <strong>secured and supported</strong></li>
+  <li>Keep cables away from sharp edges and roof surfaces — no sagging or rubbing</li>
+  <li>Leave enough slack at each connector for thermal expansion and module removal if needed</li>
+</ul>
+
+<h3>Module-Level Rapid Shutdown (MLRSD)</h3>
+<p>NEC 690.12 requires that PV conductors within the array boundary be reduced to <strong>80V or less within 30 seconds</strong> of initiating shutdown. How this is achieved depends on the inverter type:</p>
+<table>
+  <tr><th>Inverter Type</th><th>MLRSD Solution</th><th>Installation</th></tr>
+  <tr><td>Enphase IQ8 (micro)</td><td>Inherently compliant — each micro outputs &lt;60V</td><td>No additional devices needed</td></tr>
+  <tr><td>SolarEdge (optimizer)</td><td>P505 optimizers reduce to 1V on shutdown</td><td>1 optimizer per module, mounted on rail or module frame</td></tr>
+  <tr><td>SMA string</td><td>May need external MLRSD — verify with AHJ</td><td>If required: 1 device per module, mounted on rail</td></tr>
+  <tr><td>Fronius string</td><td>Needs external MLRSD (e.g., Tigo TS4-A-O)</td><td>1 per module, mounted on rail, ~$45 each</td></tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 7: ELECTRICAL — CONDUIT & WIRING                -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 class="page-break">7. Electrical — Conduit &amp; Wiring</h2>
+
+<p>This section covers EMT (Electrical Metallic Tubing) conduit installation, wiring, and the SolaDeck roof box. All work must comply with the National Electrical Code (NEC) and local amendments.</p>
+
+<h3>7.1 EMT Conduit Basics</h3>
+<p>EMT is thin-wall steel conduit — the most common raceway for solar installations. It comes in <strong>10-foot sticks</strong> and standard trade sizes (1/2", 3/4", 1", 1-1/4").</p>
+
+<h4>Cutting</h4>
+<ol>
+  <li>Measure and mark the cut line with a pencil</li>
+  <li>Cut with a pipe cutter, hacksaw, or angle grinder with a metal cut-off wheel</li>
+  <li><strong>Deburr inside and outside</strong> — a reamer or round file removes the sharp edge that could damage wire insulation (NEC 358.28)</li>
+</ol>
+
+<h4>Bending</h4>
+<p>Use a hand bender matched to the conduit size. Common bends:</p>
+<table>
+  <tr><th>Bend Type</th><th>Description</th><th>When Used</th></tr>
+  <tr><td><strong>90° bend</strong></td><td>Quarter-circle turn</td><td>Going from horizontal to vertical (or vice versa)</td></tr>
+  <tr><td><strong>Offset</strong></td><td>Two opposing bends to shift conduit sideways</td><td>Transitioning around obstacles or into an enclosure</td></tr>
+  <tr><td><strong>Kick (10°–30°)</strong></td><td>Shallow bend to adjust angle</td><td>Getting conduit flush against a wall or transitioning slope</td></tr>
+  <tr><td><strong>Saddle</strong></td><td>Up-over-down to clear an obstruction</td><td>Crossing another conduit or pipe</td></tr>
+</table>
+
+<div class="callout callout-info">
+  <div class="callout-title">📏 NEC 358.24 — Bend Limits</div>
+  <p>No more than <strong>360° of total bends</strong> (equivalent to four 90° bends) between pull points. If you need more bends, install an LB fitting or pull box at the 360° limit and start a new section.</p>
+</div>
+
+<h4>Key NEC Rules for EMT Support (358.30)</h4>
+<ul>
+  <li>Strap conduit within <strong>3 feet of every box, fitting, or enclosure</strong></li>
+  <li>Support conduit at intervals not exceeding <strong>10 feet</strong></li>
+  <li>Use <strong>one-hole straps</strong> — the strap count formula: <code>ceil(run_length / 10) + 1</code></li>
+</ul>
+
+<h3>7.2 Conduit Fittings</h3>
+<p>Every conduit entry into an enclosure (box, disconnect, inverter, panel) requires a stack of fittings:</p>
+
+<table>
+  <tr><th>Fitting</th><th>Purpose</th><th>Quantity</th></tr>
+  <tr><td><strong>Set-screw connector</strong></td><td>Attaches conduit end to the enclosure knockout</td><td>1 per entry</td></tr>
+  <tr><td><strong>Locknut</strong></td><td>Secures the connector from inside the enclosure</td><td>1 per connector</td></tr>
+  <tr><td><strong>Insulating bushing</strong></td><td>Protects wire insulation from sharp conduit edge</td><td>1 per connector (required for #4 AWG+, best practice for all)</td></tr>
+  <tr><td><strong>Coupling</strong></td><td>Joins two sticks of conduit end-to-end</td><td>sticks − 1</td></tr>
+  <tr><td><strong>One-hole strap</strong></td><td>Fastens conduit to wall/surface</td><td>Per NEC 358.30 spacing</td></tr>
+  <tr><td><strong>LB fitting</strong></td><td>Direction change with pull access (90° turn with removable cover)</td><td>1 per direction change or every ~25 ft</td></tr>
+</table>
+
+<h4>Fitting Counts per Conduit Run</h4>
+<p>For a conduit run of <strong>L</strong> feet with <strong>E</strong> endpoints (enclosure entries):</p>
+<table>
+  <tr><th>Item</th><th>Formula</th></tr>
+  <tr><td>EMT sticks (10 ft)</td><td>ceil(L / 10)</td></tr>
+  <tr><td>Couplings</td><td>max(0, sticks − 1)</td></tr>
+  <tr><td>Connectors</td><td>E (typically 2 for DC, 4 for AC through disconnect)</td></tr>
+  <tr><td>Locknuts</td><td>= connectors</td></tr>
+  <tr><td>Bushings</td><td>= connectors</td></tr>
+  <tr><td>Straps</td><td>ceil(L / 10) + 1</td></tr>
+  <tr><td>LB fittings</td><td>1 per direction change, or ceil(L / 25) minimum</td></tr>
+</table>
+
+<div class="callout callout-tip">
+  <div class="callout-title">💡 Endpoint Counts by Run Type</div>
+  <p><strong>DC homerun</strong> (roof box → inverter): 2 endpoints<br>
+  <strong>AC branch</strong> (inverter → disconnect → panel): 4 endpoints (inverter out, disconnect in, disconnect out, panel in)<br>
+  <strong>Service entrance</strong> (panel → meter): 2 endpoints</p>
+</div>
+
+<h3>7.3 Pulling Wire Through Conduit</h3>
+<ol>
+  <li><strong>Select wire:</strong> THWN-2 (copper) for conduit runs. Gauge per design (typically #10 AWG for residential up to ~30A, #8 or #6 for larger systems)</li>
+  <li><strong>Check conduit fill:</strong> NEC allows max <strong>40% fill</strong> for 3+ conductors. Verify wire cross-sections don't exceed conduit capacity.</li>
+  <li><strong>Fish tape:</strong> Push a fish tape or pull string through the conduit from one end</li>
+  <li><strong>Attach wires:</strong> Strip ends, bend through the fish tape loop, and tape smooth</li>
+  <li><strong>Lubricate:</strong> Apply wire-pulling lubricant for runs over 20 feet — it dramatically reduces friction</li>
+  <li><strong>Pull together:</strong> One person feeds wire at the entry, one pulls at the exit. Pull steadily — don't jerk.</li>
+  <li><strong>Leave slack:</strong> Leave 8–12 inches of wire extending from each box for terminations</li>
+</ol>
+
+<h3>7.4 SolaDeck Roof Box</h3>
+<p>The <strong>SolaDeck 0799-5B</strong> is Canopy Solar's standard roof box — a NEMA 3R enclosure that provides the transition point between rooftop PV wiring and conduit. It's mounted directly to the roof deck, with integrated flashing.</p>
+
+<h4>Installation</h4>
+<ol>
+  <li>Position the SolaDeck on the roof between the array and the conduit route to the inverter</li>
+  <li>Lift shingles and slide the flashing underneath, same as a vent boot</li>
+  <li>Fasten to the roof deck with the provided screws (hit at least one rafter if possible)</li>
+  <li>Seal all edges with roofing sealant</li>
+  <li>Route PV wires from the array into the top of the box (through knockouts or cable glands)</li>
+  <li>Attach EMT conduit to the bottom/side knockouts for the run down to the inverter</li>
+</ol>
+
+<h4>Interior Wiring (String Inverter)</h4>
+<p>Inside the SolaDeck, wires transition from PV cable (exposed rooftop wiring) to THWN-2 conductors (in conduit). Use DIN-rail-mounted terminal blocks:</p>
+<ul>
+  <li><strong>2 terminal blocks</strong> — Black for DC+ and Red for DC−</li>
+  <li><strong>1 grounding terminal block</strong> (green/yellow) for the equipment grounding conductor (EGC)</li>
+  <li><strong>2 end stops</strong> on the DIN rail ends</li>
+  <li><strong>2 end covers</strong> between terminal block sections</li>
+</ul>
+
+<h3>7.5 Wire Terminations</h3>
+<ul>
+  <li>Strip wire to the correct length for the terminal (typically 5/8" to 3/4")</li>
+  <li>Insert into the terminal block or breaker terminal</li>
+  <li>Torque to the manufacturer's specification (see Appendix)</li>
+  <li><strong>Aluminum wire:</strong> Apply anti-oxidant compound (Noalox or equivalent) before inserting into the terminal. Aluminum oxidizes quickly and causes high-resistance connections.</li>
+  <li><strong>Multi-strand wire:</strong> Use a compression lug or terminal rated for the wire type — never insert bare stranded wire into a setscrew terminal rated only for solid wire</li>
+</ul>
+
+<h3>7.6 Grounding</h3>
+<p>Grounding protects people and equipment from electrical faults. NEC Article 250 governs grounding requirements.</p>
+
+<h4>Grounding Electrode System (per NEC 250.50–250.53)</h4>
+<table>
+  <tr><th>Component</th><th>Qty</th><th>Purpose</th><th>NEC Reference</th></tr>
+  <tr><td>5/8" × 8' copper ground rod</td><td>2</td><td>Earth connection for fault current</td><td>250.53(A)(2) — 2 rods required unless first is ≤25Ω</td></tr>
+  <tr><td>Acorn ground rod clamp</td><td>2</td><td>Connect GEC to ground rod</td><td>250.70</td></tr>
+  <tr><td>Grounding electrode conductor (GEC)</td><td>1 run</td><td>#6 AWG bare copper (typical for ≤200A service)</td><td>250.66 sizing table</td></tr>
+  <tr><td>Bonding bushing + jumper</td><td>1</td><td>Bond service entrance raceway</td><td>250.92(B)</td></tr>
+  <tr><td>Intersystem bonding terminal</td><td>1</td><td>Accessible bonding point for telecom/cable/solar</td><td>250.94</td></tr>
+</table>
+
+<h4>Equipment Grounding Path</h4>
+<p>The equipment grounding conductor (EGC) provides a low-impedance fault-current path back to the source:</p>
+<div class="diagram">  Module frame → UFO clamp bond → Rail → Grounding lug → #6 GEC → Ground rod
+                                                                        ↓
+  Inverter chassis → EGC in conduit → Panel ground bus → Neutral-ground bond
+</div>
+
+<ul>
+  <li>EMT conduit itself is an acceptable EGC when properly coupled and made up tight (NEC 250.118(4))</li>
+  <li>However, best practice is to also pull a <strong>green or bare copper EGC</strong> in the conduit as a redundant ground path</li>
+  <li>All metallic enclosures (disconnect, roof box, junction boxes) must be bonded</li>
+</ul>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 8: INVERTER INSTALLATION                        -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 class="page-break">8. Inverter Installation</h2>
+
+<h3>8.1 String Inverter — SMA Sunny Boy / Fronius Primo GEN24</h3>
+
+<h4>Mounting</h4>
+<ol>
+  <li>Select location: <strong>shaded exterior wall</strong> near the main panel (north-facing wall is ideal to minimize heat exposure)</li>
+  <li>Minimum clearances: 12" on each side, 12" above, 36" below for ventilation and service access</li>
+  <li>Mount the <strong>wall bracket</strong> (included) using appropriate fasteners:
+    <ul>
+      <li>Wood stud: 5/16" × 3" lag bolts (hit 2 studs minimum)</li>
+      <li>Masonry/stucco: 3/8" concrete sleeve anchors</li>
+    </ul>
+  </li>
+  <li>Hang the inverter on the bracket and secure the bottom locking screws</li>
+</ol>
+
+<h4>DC Connections</h4>
+<ol>
+  <li>Route the DC home-run MC4 cables from the roof box / conduit to the inverter location</li>
+  <li>String inverters have <strong>MC4 pigtails</strong> for DC input — simply mate the MC4 connectors from the strings to the inverter pigtails</li>
+  <li>Verify polarity: <strong>positive to positive, negative to negative</strong></li>
+  <li>Measure open-circuit voltage (Voc) on each string with a multimeter before connecting:
+    <ul>
+      <li>Expected Voc = (number of modules in string) × (module Voc at temperature)</li>
+      <li>Must be within the inverter's MPPT voltage range</li>
+      <li>Must NOT exceed the inverter's maximum DC input voltage</li>
+    </ul>
+  </li>
+</ol>
+
+<h4>AC Connections</h4>
+<ol>
+  <li>Open the inverter's wiring compartment (bottom cover)</li>
+  <li>Route THWN-2 conductors from the conduit into the AC terminal block</li>
+  <li>Typical connections: <strong>L1 (black), L2 (red), Neutral (white), Ground (green or bare)</strong></li>
+  <li>Wire size: <strong>#10–#6 AWG</strong> depending on inverter output current and distance</li>
+  <li>Torque all terminal screws to the inverter manufacturer's specification</li>
+</ol>
+
+<h4>Conduit Entries</h4>
+<p>SMA and Fronius have bottom-entry knockouts:</p>
+<ul>
+  <li>1× 3/4"–1" knockout for AC conduit</li>
+  <li>1× 1/2" knockout for communication wiring</li>
+  <li>DC enters via MC4 cable glands (no conduit needed for DC on string inverters)</li>
+</ul>
+
+<h4>Communication Setup</h4>
+<ul>
+  <li><strong>SMA:</strong> Production CTs (included) install around the AC conductors inside the inverter. Connect WiFi or Ethernet for SMA Sunny Portal monitoring. Consumption CTs sold separately (~$50/pair).</li>
+  <li><strong>Fronius:</strong> DataManager built-in. Fronius Smart Meter (~$250) needed for consumption monitoring and export limiting. WiFi or Ethernet connection.</li>
+</ul>
+
+<h3>8.2 Microinverter — Enphase IQ8</h3>
+
+<h4>Under-Module Mounting</h4>
+<ol>
+  <li>Each IQ8 microinverter mounts to the <strong>underside of the module frame or directly to the racking rail</strong> using the provided bracket</li>
+  <li>Position the microinverter near the module's junction box for short DC lead routing</li>
+  <li>Connect the module's MC4 leads to the microinverter's DC input MC4 connectors</li>
+  <li>Connect the microinverter's AC output to the <strong>Q Cable trunk connector</strong> (twist-lock, pre-wired)</li>
+</ol>
+
+<h4>Q Cable Routing</h4>
+<ul>
+  <li><strong>Q Cable</strong> is a pre-wired trunk cable with twist-lock connectors spaced every ~5 feet (one per module position)</li>
+  <li>Route the Q Cable along the rail, under the modules</li>
+  <li>Secure with wire clips every 3–4 feet</li>
+  <li>At the end of each branch, install a <strong>Q Cable Terminator</strong> (~$5) to seal the unused end</li>
+  <li>Route the Q Cable's home-run end into the <strong>SolaDeck roof box</strong>, then transition to THWN-2 in conduit for the run to the IQ Combiner</li>
+</ul>
+
+<h4>IQ Gateway / IQ Combiner Installation</h4>
+<p>The <strong>IQ Combiner 4</strong> (~$628) is the central hub that combines all microinverter branch circuits and provides the AC disconnect function:</p>
+<ol>
+  <li>Mount the IQ Combiner on the wall near the main panel (same location where a string inverter would go)</li>
+  <li>Route AC conduit from the roof box into the Combiner</li>
+  <li>The Combiner has a <strong>main breaker</strong> that serves as the AC disconnect — no separate disconnect needed</li>
+  <li>Route AC output from the Combiner to the main panel via conduit</li>
+  <li>Connect communication: the IQ Gateway communicates with microinverters via <strong>power-line communication</strong> (PLC) — no separate communication wiring to the roof</li>
+  <li>Connect WiFi or Ethernet for cloud monitoring via the Enphase app</li>
+</ol>
+
+<h3>8.3 AC Disconnect</h3>
+<p>A visible, lockable AC disconnect is required for all solar systems. It allows the utility and fire department to de-energize the AC side of the system.</p>
+<ul>
+  <li><strong>Location:</strong> Near the inverter or near the utility meter — check AHJ requirements</li>
+  <li><strong>Rating:</strong> Must be rated for the system's maximum AC output current (typically 60A or 100A disconnect for residential)</li>
+  <li><strong>Type:</strong> Non-fused safety switch (e.g., Eaton DG222URB for 60A, DG223URB for 100A) unless fusing is required</li>
+  <li><strong>Wiring:</strong> Line side from inverter, load side to panel. Use the <strong>same wire gauge</strong> throughout (no upsizing or downsizing through the disconnect).</li>
+  <li><strong>Enphase exception:</strong> If using an IQ Combiner with a main breaker, the Combiner IS the disconnect</li>
+</ul>
+
+<h3>8.4 Commissioning</h3>
+<ol>
+  <li><strong>Verify DC:</strong> Measure Voc on each string — compare to calculated value. If significantly low, check for reversed polarity, disconnected modules, or shading.</li>
+  <li><strong>Verify AC:</strong> Close the AC disconnect. Energize the main panel breaker. Check for 240V AC at the inverter.</li>
+  <li><strong>Start the inverter:</strong> Most inverters auto-start when both DC and AC are present. Wait 5 minutes for grid synchronization.</li>
+  <li><strong>Check production:</strong> Verify the inverter is producing power (display or app shows watts being generated).</li>
+  <li><strong>Monitor setup:</strong> Connect the inverter or gateway to WiFi and verify the monitoring app shows the system online.</li>
+</ol>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 9: INSPECTION & COMMISSIONING                   -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 class="page-break">9. Inspection &amp; Commissioning</h2>
+
+<h3>Pre-Inspection Self-Audit</h3>
+<p>Before calling for the building department inspection, walk the entire system with this checklist. Fix any issues BEFORE the inspector arrives.</p>
+
+<h4>Roof / Racking</h4>
+<ul class="checklist">
+  <li>All FlashFoot2s hit rafters (verify visually — no spinning lag bolts)</li>
+  <li>All clamps torqued to 80 in-lbs (use torque wrench to verify at least 20% of clamps)</li>
+  <li>Rail splices properly seated</li>
+  <li>No module overhang exceeding 6" past last attachment</li>
+  <li>Wire management clips installed, wiring neat and secured</li>
+  <li>Roof penetrations properly flashed and sealed</li>
+  <li>End stoppers installed at all rail ends</li>
+</ul>
+
+<h4>Electrical</h4>
+<ul class="checklist">
+  <li>Conduit properly strapped — within 3 ft of every box, every 10 ft thereafter</li>
+  <li>No more than 360° of bends between pull points</li>
+  <li>Connectors, locknuts, and bushings at every conduit entry</li>
+  <li>All terminal connections torqued to spec</li>
+  <li>Wire colors correct: Black (L1), Red (L2), White (Neutral), Green/Bare (Ground)</li>
+  <li>Grounding electrode system complete — 2 ground rods, acorn clamps, GEC connected</li>
+  <li>Bonding bushing installed at service entrance raceway</li>
+  <li>Conduit fill within NEC 40% limit</li>
+</ul>
+
+<h4>Labels</h4>
+<ul class="checklist">
+  <li><strong>Main panel label</strong> — "WARNING: SOLAR ELECTRIC SYSTEM CONNECTED" (NEC 690.56)</li>
+  <li><strong>Disconnect label</strong> — "SOLAR DISCONNECT" with voltage/current ratings</li>
+  <li><strong>Inverter label</strong> — AC/DC voltage and current ratings</li>
+  <li><strong>Conduit labels</strong> — "SOLAR PHOTOVOLTAIC" on DC conduit at accessible points</li>
+  <li><strong>Module labels</strong> — rapid shutdown label near the main service panel (if MLRSD-equipped)</li>
+  <li><strong>Ground rod labels</strong> — identified as grounding electrode</li>
+</ul>
+
+<h3>Common Inspection Failure Points</h3>
+<table>
+  <tr><th>Issue</th><th>Why It Fails</th><th>How to Avoid</th></tr>
+  <tr><td>Missing labels</td><td>NEC 690.56 requires specific warnings</td><td>Carry a label kit — apply labels during installation, not after</td></tr>
+  <tr><td>Conduit strap spacing</td><td>Straps >10 ft apart or missing near boxes</td><td>Strap as you go, measure spacing</td></tr>
+  <tr><td>Missing bushings</td><td>Required on all entries with #4+ wire, best practice always</td><td>Install bushing at every connector — make it habit</td></tr>
+  <tr><td>Exposed wiring</td><td>PV wire not in raceway or properly secured</td><td>Use wire clips, conduit, or listed cable assemblies</td></tr>
+  <tr><td>Improper grounding</td><td>Missing ground rod, incorrect GEC size, no bonding bushing</td><td>Follow NEC 250 checklist religiously</td></tr>
+  <tr><td>Excessive conduit bends</td><td>>360° between pull points</td><td>Count bends as you install. Add an LB if approaching 360°.</td></tr>
+  <tr><td>Wrong breaker location</td><td>Solar breaker must be at opposite end of bus from main breaker (NEC 705.12)</td><td>Verify before installing</td></tr>
+</table>
+
+<h3>System Startup Sequence</h3>
+<ol>
+  <li><strong>Verify DC voltage</strong> — Measure Voc on each string at the inverter. Record readings.</li>
+  <li><strong>Close the AC disconnect</strong></li>
+  <li><strong>Turn ON the solar breaker</strong> at the main panel</li>
+  <li><strong>Allow inverter to start</strong> — string inverters take 2–5 minutes to synchronize with the grid</li>
+  <li><strong>Verify AC output</strong> — Check power production on the inverter display or monitoring app</li>
+  <li><strong>Verify monitoring</strong> — Confirm the system appears online in the manufacturer's portal (SMA Sunny Portal, Fronius Solar.web, Enphase Enlighten)</li>
+</ol>
+
+<h3>Customer Walkthrough</h3>
+<p>After passing inspection and verifying production:</p>
+<ol>
+  <li>Show the homeowner where the inverter, disconnect, and monitoring equipment are located</li>
+  <li>Demonstrate the monitoring app — how to check daily production</li>
+  <li>Explain the AC disconnect — when and how to use it (emergencies, utility work)</li>
+  <li>Set expectations: production varies by season, weather, and shade. Winter months produce less.</li>
+  <li>Provide contact information for any post-installation questions or monitoring alerts</li>
+  <li>Leave the warranty documents, equipment manuals, and inspection approval in a folder</li>
+</ol>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 10: TYPICAL INSTALLATION TIMELINE               -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 class="page-break">10. Typical Installation Timeline</h2>
+
+<h3>Residential — Day 1 (4-Person Crew, Comp Shingle Roof)</h3>
+<p>A typical residential system (16–24 panels, comp shingle, string or micro inverter) can be completed in one full day with an experienced crew.</p>
+
+<div class="timeline">
+  <div class="timeline-item">
+    <div class="timeline-time">7:00 AM — Arrive &amp; Setup</div>
+    <p>Arrive at site. Conduct pre-job safety briefing. Review the design plan with the crew. Set up ladders and establish roof access. Install roof anchor. Stage materials — rails and FlashFoot2s go up first.</p>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-time">7:30 AM — Racking (2.5 hours)</div>
+    <p>Find and mark rafters. Install FlashFoot2s at marked positions. Lift rails to roof and install on L-feet. Align, square, and tighten. Install splices if needed. Install grounding lugs. <strong>Two people on roof, two staging materials.</strong></p>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-time">10:00 AM — Modules (2 hours)</div>
+    <p>Pass modules to roof team one at a time. Set modules on rails, install clamps, torque to 80 in-lbs. Connect MC4 connectors (series strings). Install wire management clips. Verify all connections with tug test. <strong>Two on roof setting panels, one passing up, one prepping electrical.</strong></p>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-time">12:00 PM — Lunch (30 minutes)</div>
+    <p>Hydrate. Review afternoon plan. Address any issues found during morning work.</p>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-time">12:30 PM — Electrical: Conduit &amp; Wiring (2 hours)</div>
+    <p>Install SolaDeck roof box. Run EMT conduit from roof box down exterior wall to inverter location, continuing to disconnect and main panel. Cut, bend, strap conduit. Install fittings at all endpoints. Pull wire through conduit. Terminate wires in roof box (terminal blocks).</p>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-time">2:30 PM — Inverter &amp; Disconnect (1.5 hours)</div>
+    <p>Mount inverter on wall. Wire DC connections (MC4 for string inverter, conduit for micro combiner). Wire AC connections through disconnect to main panel. Install solar breaker in panel. Torque all terminations.</p>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-time">4:00 PM — Grounding, Labels &amp; Cleanup (1 hour)</div>
+    <p>Drive ground rods. Run GEC from panel ground bus to ground rods. Install acorn clamps. Install bonding bushing. Apply all required labels. Clean up job site — remove debris, clean roof, coil extra wire.</p>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-time">5:00 PM — Self-Inspection &amp; Punch List</div>
+    <p>Walk the entire system with the pre-inspection checklist. Fix any deficiencies. Take completion photos. Secure site for overnight (if inspection is next day).</p>
+  </div>
+</div>
+
+<h3>Residential — Day 2 (If Needed)</h3>
+<p>Not always necessary, but sometimes required for:</p>
+<ul>
+  <li>Complex electrical (long conduit runs, panel upgrades, subpanel)</li>
+  <li>Inspection day — be on-site when inspector arrives</li>
+  <li>Commissioning and monitoring setup</li>
+  <li>Customer walkthrough</li>
+  <li>Punch list items from self-inspection</li>
+</ul>
+
+<h3>Commercial Flat Roof (Multi-Day)</h3>
+<table>
+  <tr><th>Day</th><th>Tasks</th><th>Crew Size</th></tr>
+  <tr><td>Day 1</td><td>Material staging, layout marking, ballast block placement or tilt leg installation</td><td>4–6</td></tr>
+  <tr><td>Day 2</td><td>Rail installation, module setting (first half)</td><td>4–6</td></tr>
+  <tr><td>Day 3</td><td>Complete modules, wire management, conduit rough-in</td><td>4–6</td></tr>
+  <tr><td>Day 4</td><td>Electrical terminations, inverter, grounding, labels</td><td>3–4</td></tr>
+  <tr><td>Day 5</td><td>Commissioning, inspection, punch list</td><td>2–3</td></tr>
+</table>
+
+<h3>Ground Mount (Multi-Day)</h3>
+<table>
+  <tr><th>Day</th><th>Tasks</th><th>Crew</th></tr>
+  <tr><td>Day 1</td><td>Post driving or pier pouring, site grading</td><td>4–6</td></tr>
+  <tr><td>Day 2</td><td>Cross-beams, Top Caps, rail installation, tilt leg adjustment</td><td>4–6</td></tr>
+  <tr><td>Day 3</td><td>Module installation, wire management</td><td>4–6</td></tr>
+  <tr><td>Day 4</td><td>Trenching, underground conduit, inverter pad, electrical</td><td>4–6</td></tr>
+  <tr><td>Day 5</td><td>Finish electrical, grounding, commissioning, inspection</td><td>3–4</td></tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 11: COMMON MISTAKES & TROUBLESHOOTING           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 class="page-break">11. Common Mistakes &amp; Troubleshooting</h2>
+
+<h3>Installation Mistakes</h3>
+
+<h4>1. Missed Rafters</h4>
+<p><strong>What happens:</strong> Lag bolt goes into sheathing only (3/8" – 3/4" plywood) — near-zero pullout strength. The FlashFoot2 will eventually pull out in a windstorm.</p>
+<p><strong>How to spot it:</strong> The lag bolt spins freely or drives in with almost no resistance. Or you can wiggle the L-foot with your hand.</p>
+<p><strong>Fix:</strong> Remove the lag bolt, seal the hole with roof sealant, and relocate the FlashFoot2 to center on a rafter. Never use toggle bolts, molly bolts, or "creative" solutions.</p>
+
+<h4>2. Reverse Polarity on DC Strings</h4>
+<p><strong>What happens:</strong> One module's MC4 connectors are crossed — positive connected to the wrong lead. String voltage reads lower than expected (the reversed module's voltage subtracts from the total).</p>
+<p><strong>How to spot it:</strong> String Voc is approximately 1 × module Voc lower than calculated. Or the inverter reports a ground fault.</p>
+<p><strong>Fix:</strong> Cover modules to de-energize. Use MC4 disconnect tool to separate connectors. Trace and correct the reversed connection.</p>
+
+<h4>3. Under-Torqued Connections</h4>
+<p><strong>What happens:</strong> Loose electrical connections create high resistance → heat → eventual failure or fire. Loose clamps allow modules to shift in wind.</p>
+<p><strong>Fix:</strong> Always use a torque wrench for clamps (80 in-lbs) and electrical terminations. "Hand-tight" is not a specification.</p>
+
+<h4>4. Missing Knockouts / Bushings</h4>
+<p><strong>What happens:</strong> Open knockouts allow moisture, insects, and debris into enclosures. Missing bushings cause wire insulation damage over time.</p>
+<p><strong>Fix:</strong> Install a knockout seal on any unused knockout. Install insulating bushings on all conduit entries.</p>
+
+<h4>5. Conduit Fill Violations</h4>
+<p><strong>What happens:</strong> Too many wires in too small a conduit. Exceeds NEC 40% fill for 3+ conductors — fails inspection, makes wire pulling difficult, and causes heat buildup.</p>
+<p><strong>Fix:</strong> Calculate fill before running conduit. When in doubt, upsize the conduit one trade size.</p>
+
+<h3>Troubleshooting</h3>
+
+<h4>Ground Fault Indicator on Inverter</h4>
+<ol>
+  <li>Shut down the system (open AC disconnect, cover modules if possible)</li>
+  <li>Check all MC4 connections — look for damage, moisture, or exposed wire</li>
+  <li>Measure insulation resistance between each string conductor and ground using a megger</li>
+  <li>A reading below 1 MΩ indicates a ground fault — trace the affected string conductor to find the fault location</li>
+  <li>Common causes: pinched wire, damaged insulation from sharp conduit edge, water in junction box</li>
+</ol>
+
+<h4>Low Production</h4>
+<table>
+  <tr><th>Symptom</th><th>Possible Cause</th><th>Check</th></tr>
+  <tr><td>Output significantly below expected</td><td>Shade, soiling, module damage</td><td>Visual inspection, clean modules, check for new shading</td></tr>
+  <tr><td>One string producing less than others</td><td>Reversed module, failed module, shade on string</td><td>Compare string Voc values, check per-module monitoring</td></tr>
+  <tr><td>System not producing at all</td><td>Tripped breaker, blown fuse, open disconnect, inverter fault</td><td>Check all disconnects, breakers, and inverter error codes</td></tr>
+  <tr><td>Intermittent production drops</td><td>Loose connection, intermittent ground fault</td><td>Thermal scan of connections, check inverter fault history</td></tr>
+  <tr><td>Production drops on hot days</td><td>Normal temperature derating</td><td>Compare to PVWatts estimate — modules lose ~0.35%/°C above 25°C</td></tr>
+</table>
+
+<div class="callout callout-tip">
+  <div class="callout-title">💡 Pro Tip — Diagnosing String Issues</div>
+  <p>When troubleshooting a string inverter system, measure <strong>Voc of each string</strong> at the inverter DC inputs. All strings of the same length should read within ~5V of each other. A string that reads significantly low likely has a reversed, disconnected, or failed module.</p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 12: NEC QUICK REFERENCE                         -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 class="page-break">12. NEC Quick Reference</h2>
+
+<h3>Key NEC Articles for Solar</h3>
+<table>
+  <tr><th>Article</th><th>Subject</th><th>Key Points</th></tr>
+  <tr><td><strong>690</strong></td><td>Solar Photovoltaic Systems</td><td>Primary article for PV — covers system sizing, disconnects, wiring methods, grounding, labeling, rapid shutdown</td></tr>
+  <tr><td><strong>690.12</strong></td><td>Rapid Shutdown</td><td>Conductors within array boundary must reduce to ≤80V within 30 seconds of initiating shutdown</td></tr>
+  <tr><td><strong>690.56</strong></td><td>Labels and Markings</td><td>Required warning labels at main panel, disconnect, and inverter; rapid shutdown placard</td></tr>
+  <tr><td><strong>705</strong></td><td>Interconnected Power Sources</td><td>Governs connection of solar to utility grid — 120% rule, supply-side tap, bus rating</td></tr>
+  <tr><td><strong>705.12</strong></td><td>Point of Connection</td><td>Load-side: solar breaker at opposite end of bus from main. Supply-side: tap ahead of main breaker.</td></tr>
+  <tr><td><strong>358</strong></td><td>EMT Conduit</td><td>Installation methods, support, bending, and use restrictions for EMT</td></tr>
+  <tr><td><strong>358.24</strong></td><td>Bends</td><td>Max 360° of bends between pull points</td></tr>
+  <tr><td><strong>358.30</strong></td><td>Support</td><td>Within 3 ft of boxes, every 10 ft thereafter</td></tr>
+  <tr><td><strong>250</strong></td><td>Grounding and Bonding</td><td>Equipment grounding, grounding electrode system, GEC sizing, bonding</td></tr>
+  <tr><td><strong>250.53</strong></td><td>Supplemental Electrodes</td><td>Two ground rods required unless first reads ≤25Ω</td></tr>
+  <tr><td><strong>250.66</strong></td><td>GEC Sizing</td><td>Grounding electrode conductor size based on service conductor size</td></tr>
+  <tr><td><strong>250.118</strong></td><td>EGC Types</td><td>EMT is acceptable as EGC when properly installed (250.118(4))</td></tr>
+  <tr><td><strong>300.4(G)</strong></td><td>Insulating Fittings</td><td>Required at conduit entries for #4 AWG and larger conductors</td></tr>
+  <tr><td><strong>310</strong></td><td>Conductor Sizing</td><td>Ampacity tables for conductors — Table 310.16 is the primary reference</td></tr>
+</table>
+
+<h3>Wire Sizing Quick Reference</h3>
+<table>
+  <tr><th>Wire Size (AWG)</th><th>Ampacity (THWN-2, 75°C column)</th><th>Common Use in Solar</th></tr>
+  <tr><td>#14</td><td>20A</td><td>Communication wiring only</td></tr>
+  <tr><td>#12</td><td>25A</td><td>Enphase Q Cable, small branch circuits</td></tr>
+  <tr><td>#10</td><td>35A</td><td>PV source circuits, small string inverter AC</td></tr>
+  <tr><td>#8</td><td>50A</td><td>String inverter AC, larger PV circuits</td></tr>
+  <tr><td>#6</td><td>65A</td><td>Large inverter AC, GEC (common residential)</td></tr>
+  <tr><td>#4</td><td>85A</td><td>Service entrance, large inverter output</td></tr>
+  <tr><td>#3</td><td>100A</td><td>100A service upgrade</td></tr>
+  <tr><td>#2</td><td>115A</td><td>Large commercial</td></tr>
+  <tr><td>#1/0</td><td>150A</td><td>200A service entrance (copper)</td></tr>
+</table>
+<p><em>Note: Ampacities shown are for copper conductors in conduit at 30°C ambient. Derate for higher temperatures, conduit fill, and other factors per NEC 310.16.</em></p>
+
+<h3>Conduit Fill Quick Reference (NEC Chapter 9, Table 1)</h3>
+<table>
+  <tr><th>Number of Conductors</th><th>Maximum Fill (%)</th></tr>
+  <tr><td>1</td><td>53%</td></tr>
+  <tr><td>2</td><td>31%</td></tr>
+  <tr><td>3 or more</td><td>40%</td></tr>
+</table>
+
+<h4>Typical Conduit Selection (3+ THWN-2 conductors)</h4>
+<table>
+  <tr><th>Wires</th><th>Minimum Conduit</th></tr>
+  <tr><td>3× #10 AWG + #10 ground</td><td>1/2" EMT</td></tr>
+  <tr><td>3× #8 AWG + #10 ground</td><td>3/4" EMT</td></tr>
+  <tr><td>3× #6 AWG + #8 ground</td><td>3/4" EMT</td></tr>
+  <tr><td>3× #4 AWG + #6 ground</td><td>1" EMT</td></tr>
+  <tr><td>4× #6 AWG + #6 ground</td><td>1" EMT</td></tr>
+  <tr><td>3× #2 AWG + #6 ground</td><td>1-1/4" EMT</td></tr>
+</table>
+
+<h3>Grounding Requirements Summary</h3>
+<table>
+  <tr><th>Component</th><th>Requirement</th><th>NEC Reference</th></tr>
+  <tr><td>Ground rods</td><td>2× 5/8"×8' copper rods, min 6 ft apart</td><td>250.53(A)(2)</td></tr>
+  <tr><td>GEC size</td><td>Per 250.66 table — typically #6 AWG for ≤200A service</td><td>250.66</td></tr>
+  <tr><td>EGC in conduit</td><td>Per 250.122 table — sized to OCPD protecting circuit</td><td>250.122</td></tr>
+  <tr><td>Module bonding</td><td>Each module bonded to mounting system (UFO clamp or WEEB)</td><td>690.43</td></tr>
+  <tr><td>Inverter grounding</td><td>Equipment grounding terminal bonded to EGC</td><td>250.110</td></tr>
+</table>
+
+<h3>Label Requirements (NEC 690.56)</h3>
+<table>
+  <tr><th>Location</th><th>Label Text (minimum)</th></tr>
+  <tr><td>Main service disconnect</td><td>"WARNING: SOLAR ELECTRIC SYSTEM CONNECTED TO THIS ELECTRICAL SYSTEM"</td></tr>
+  <tr><td>AC disconnect</td><td>"SOLAR DISCONNECT" + rated voltage and current</td></tr>
+  <tr><td>Inverter</td><td>AC/DC voltage, current, and power ratings</td></tr>
+  <tr><td>DC conduit (accessible points)</td><td>"PHOTOVOLTAIC POWER SOURCE"</td></tr>
+  <tr><td>Rapid shutdown initiator</td><td>Red placard with building identifier and "SOLAR PV SYSTEM EQUIPPED WITH RAPID SHUTDOWN"</td></tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- APPENDIX: TORQUE SPECS & HARDWARE REFERENCE             -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 class="page-break">Appendix: Torque Specs &amp; Hardware Reference</h2>
+
+<h3>A.1 IronRidge Racking Torque Specifications</h3>
+<table>
+  <tr><th>Connection</th><th>Torque Value</th><th>Notes</th></tr>
+  <tr><td>UFO Mid Clamp</td><td>80 in-lbs</td><td>10mm hex. Do NOT exceed — over-torque deforms module frame.</td></tr>
+  <tr><td>EFO End Clamp</td><td>80 in-lbs</td><td>Same as UFO mid clamp</td></tr>
+  <tr><td>Rail-to-L-Foot T-bolt</td><td>20 ft-lbs (240 in-lbs)</td><td>Secures rail to the L-foot/FlashFoot2 bracket</td></tr>
+  <tr><td>FlashFoot2 lag bolt</td><td>Drive until seated firmly</td><td>Impact driver, 5/16" hex. Must penetrate ≥2.5" into rafter.</td></tr>
+  <tr><td>Grounding lug set screw</td><td>35 in-lbs</td><td>Secures GEC to rail</td></tr>
+  <tr><td>BOSS Splice</td><td>No additional torque</td><td>Pre-bonded structural connection</td></tr>
+  <tr><td>Bonded Hardware (BHW) T-bolt</td><td>Per IronRidge install guide</td><td>Used with standalone L-feet</td></tr>
+</table>
+
+<h3>A.2 MC4 Connector Specifications</h3>
+<table>
+  <tr><th>Specification</th><th>Value</th></tr>
+  <tr><td>Mating torque (threaded coupling nut)</td><td>Hand-tight + 1/4 turn (if threaded type)</td></tr>
+  <tr><td>Mating force (snap-lock type)</td><td>Push until audible click — verify with tug test (~50 N pull)</td></tr>
+  <tr><td>Crimp tool</td><td>Must use manufacturer-approved MC4 crimp tool (Amphenol H4TC0003 or equivalent)</td></tr>
+  <tr><td>Contact resistance</td><td>&lt;0.5 mΩ when properly crimped and mated</td></tr>
+  <tr><td>Disconnect tool</td><td>Required — MC4 spanner wrench. NEVER pry apart with screwdrivers.</td></tr>
+  <tr><td>Max system voltage</td><td>1000V or 1500V (verify specific connector rating)</td></tr>
+  <tr><td>IP rating</td><td>IP67 when mated</td></tr>
+</table>
+
+<h3>A.3 Electrical Terminal Torque Specifications</h3>
+<table>
+  <tr><th>Wire Size (AWG)</th><th>Typical Terminal Torque</th><th>Notes</th></tr>
+  <tr><td>#14 – #10</td><td>20–25 in-lbs</td><td>Check equipment label — torque varies by terminal design</td></tr>
+  <tr><td>#8 – #6</td><td>35–45 in-lbs</td><td>Larger terminals need higher torque</td></tr>
+  <tr><td>#4 – #2</td><td>50–75 in-lbs</td><td>Use calibrated torque screwdriver</td></tr>
+  <tr><td>#1 – #1/0</td><td>100–200 in-lbs</td><td>Large lugs — verify per manufacturer</td></tr>
+  <tr><td>Breaker terminals</td><td>Per breaker label</td><td>Always printed on breaker body or literature</td></tr>
+</table>
+
+<div class="callout callout-info">
+  <div class="callout-title">📏 Always Check the Label</div>
+  <p>The torque specification printed on the equipment (inverter, breaker, disconnect) always takes precedence over general tables. Every manufacturer may have different specs for the same wire size. When in doubt, look at the label stamped on the device.</p>
+</div>
+
+<h3>A.4 Conduit Fitting Torque</h3>
+<table>
+  <tr><th>Fitting Type</th><th>Torque / Method</th></tr>
+  <tr><td>Set-screw EMT connector</td><td>Hand-tight + 1/4 turn with pliers. Screw must be firmly seated in conduit wall.</td></tr>
+  <tr><td>Set-screw EMT coupling</td><td>Same as connector — each screw firmly seated</td></tr>
+  <tr><td>Compression EMT connector</td><td>Hand-tight + wrench to compress ring. Used for outdoor/wet locations.</td></tr>
+  <tr><td>Locknut</td><td>Hand-tight + 1/4 turn with channel-locks. Must be snug against enclosure wall.</td></tr>
+  <tr><td>LB fitting cover screws</td><td>Firm hand-tight. Do not over-torque — gasket provides seal.</td></tr>
+</table>
+
+<h3>A.5 Common Canopy Solar Part Numbers</h3>
+
+<h4>Racking (IronRidge)</h4>
+<table>
+  <tr><th>Part Number</th><th>Description</th><th>Unit Price</th></tr>
+  <tr><td>XR-100-168-B</td><td>XR100 Rail 14' (168") Black</td><td>$50.39</td></tr>
+  <tr><td>XR-100-204B</td><td>XR100 Rail 17' (204") Black</td><td>$61.23</td></tr>
+  <tr><td>XR-1000-204A</td><td>XR1000 Rail 17' (204") Silver</td><td>$89.16</td></tr>
+  <tr><td>FF2-02-B2</td><td>FlashFoot2 (Black)</td><td>$12.41</td></tr>
+  <tr><td>UFO-CL-01-B1</td><td>UFO Mid Clamp (Black)</td><td>$3.15</td></tr>
+  <tr><td>UFO-END-01-B1</td><td>UFO End Clamp 30–40mm (Black)</td><td>$4.23</td></tr>
+  <tr><td>XR100-BOSS-01-M1</td><td>XR100 Boss Splice</td><td>$6.80</td></tr>
+  <tr><td>XR-LUG-03-A1</td><td>Rail Grounding Lug</td><td>$4.95</td></tr>
+  <tr><td>DCS-1307-5000</td><td>Double Wire Clip</td><td>$0.18</td></tr>
+</table>
+
+<h4>Electrical</h4>
+<table>
+  <tr><th>Part Number</th><th>Description</th><th>Unit Price</th></tr>
+  <tr><td>SolaDeck 0799-5B</td><td>Roof Box 600V 120A, Comp Shingle</td><td>$59.93</td></tr>
+  <tr><td>3-275</td><td>1/2" × 10' EMT Conduit</td><td>$4.73</td></tr>
+  <tr><td>37704</td><td>3/4" × 10' EMT Conduit</td><td>$8.40</td></tr>
+  <tr><td>615880</td><td>5/8" × 8' Copper Ground Rod</td><td>$20.67</td></tr>
+  <tr><td>30136</td><td>3/8"–3/4" Bronze Acorn Ground Rod Clamp</td><td>$2.79</td></tr>
+  <tr><td>DG222URB</td><td>Safety Switch Non-Fuse 60A 240V 3R</td><td>$151.33</td></tr>
+</table>
+
+<h4>Terminal Blocks &amp; Accessories (SolaDeck Interior)</h4>
+<table>
+  <tr><th>Part Number</th><th>Description</th><th>Unit Price</th></tr>
+  <tr><td>7641K171</td><td>Grounding Terminal Block 14–4 AWG (green/yellow)</td><td>$9.86</td></tr>
+  <tr><td>7641K151</td><td>Terminal Block 18–6 AWG (Black / Red / Grey)</td><td>$3.87–$4.59</td></tr>
+  <tr><td>7641K192</td><td>Terminal Block End Cover/Divider</td><td>$1.22</td></tr>
+  <tr><td>7641K35</td><td>Terminal Block End Stop</td><td>$1.32</td></tr>
+  <tr><td>SOLAD 1452</td><td>Fuse Holder Midget 600V 30A (DIN rail)</td><td>$5.56</td></tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- FOOTER                                                  -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page-footer" style="margin-top: 3rem;">
+  <p><strong>Canopy Solar — Entry-Level Installer Training Manual</strong><br>
+  Version 1.0 — March 2026<br>
+  © 2026 Canopy Solar. All rights reserved. Confidential — do not distribute outside the organization.<br>
+  For questions or corrections, contact the Canopy Solar operations team.</p>
+</div>
+
+</div><!-- .manual -->
+</body>
+</html>

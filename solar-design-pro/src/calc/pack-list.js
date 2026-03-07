@@ -35,7 +35,7 @@ function addConduitRun(a, szRaw, runLen, label, endpoints) {
   a('Conduit', `${sz} LB Fitting${lbl}`,             lbs,       'ea', p.lb);
 }
 
-export function mkPack(m, iv, d, sz, wr, es, pht, ivs) {
+export function mkPack(m, iv, d, sz, wr, es, pht, ivs, rack) {
   if (!m || !iv || !d) return [];
   const n = d.tm || 0, ni = d.ni || 1, mi = iv.tp === "micro", oi = iv.tp === "optimizer";
   const L = [];
@@ -62,12 +62,16 @@ export function mkPack(m, iv, d, sz, wr, es, pht, ivs) {
     if (oi) { a("Optimizer", "SolarEdge P505", n, "ea", 70); }
   }
 
-  const rl = Math.ceil(n / 4) * 2;
-  a("Racking", "XR100 Rail 168\"", rl, "ea", 48.5);
-  a("Racking", "FlashFoot2", rl * 2, "ea", 14.5);
-  a("Racking", "Mid Clamp", Math.max(0, (n - rl) * 2), "ea", 1.75);
-  a("Racking", "End Clamp", rl * 2, "ea", 1.75);
-  a("Racking", "WEEB Ground Clip", n, "ea", 3.25);
+  if (rack?.bom) {
+    rack.bom.forEach(item => a(item.c, item.d, item.q, item.u, item.$));
+  } else {
+    const rl = Math.ceil(n / 4) * 2;
+    a("Racking", "XR100 Rail 168\"", rl, "ea", 48.5);
+    a("Racking", "FlashFoot2", rl * 2, "ea", 14.5);
+    a("Racking", "Mid Clamp", Math.max(0, (n - rl) * 2), "ea", 1.75);
+    a("Racking", "End Clamp", rl * 2, "ea", 1.75);
+    a("Racking", "WEEB Ground Clip", n, "ea", 3.25);
+  }
 
   if (!hasWr) {
     // ── Original hard-coded fallback ──

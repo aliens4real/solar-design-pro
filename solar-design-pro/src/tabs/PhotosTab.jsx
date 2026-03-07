@@ -155,14 +155,26 @@ export default function PhotosTab({ pht, sPht, ap, sAp, sz, pj, iv, dsg, dAn }) 
     });
   }, [ph, zoneMks, dAn, containerSize, updAn]);
 
-  // ── Auto-import on zone selection ──
-  const prevZnRef = useRef(null);
+  // ── Auto-import on zone selection (only when user changes dropdown, not on remount) ──
+  const prevZnRef = useRef(ph?.zn || null);
   useEffect(() => {
     const zn = ph?.zn;
     if (!zn || zn === prevZnRef.current) { prevZnRef.current = zn || null; return; }
     prevZnRef.current = zn;
-    handleZoneImport(zn);
+    // Skip if markers already imported for this zone (preserves user adjustments on remount)
+    const alreadyImported = (ph?.mk || []).some(m => m.imported && m.srcZone === zn);
+    if (!alreadyImported) handleZoneImport(zn);
   }, [ph?.zn, handleZoneImport]);
+
+  // ── Deferred zone import (auto-import when dAn populates after seed) ──
+  useEffect(() => {
+    if (!ph || !ph.zn) return;
+    const hasZoneMarkers = (zoneMks[ph.zn] || []).length > 0;
+    const alreadyImported = (ph.mk || []).some(m => m.imported && m.srcZone === ph.zn);
+    if (hasZoneMarkers && !alreadyImported) {
+      handleZoneImport(ph.zn);
+    }
+  }, [ph?.zn, zoneMks, handleZoneImport]);
 
   // ── Per-zone imported bounding boxes ──
   const importedBoxes = useMemo(() => {
@@ -211,11 +223,20 @@ export default function PhotosTab({ pht, sPht, ap, sAp, sz, pj, iv, dsg, dAn }) 
         ? <div style={{ ...cd, textAlign: "center", padding: 60 }}><div style={{ fontSize: 44, marginBottom: 10, opacity: .4 }}>◻</div><div style={{ fontFamily: ff, color: td }}>Upload site photos to annotate</div></div>
         : <div style={{ display: "flex", gap: 12 }}>
             <div style={{ width: 120, flexShrink: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-              {pht.map(p => (
-                <div key={p.id} onClick={() => sAp(p.id)} style={{ borderRadius: 6, overflow: "hidden", cursor: "pointer", border: `2px solid ${ap === p.id ? ac : bd}` }}>
-                  <img src={p.src} alt="" style={{ width: "100%", height: 70, objectFit: "cover", display: "block" }} />
+              {pht.map(p => {
+                const zCfg = p.zn ? ZONE_CFG[p.zn] : null;
+                return (
+                <div key={p.id} onClick={() => sAp(p.id)} style={{ borderRadius: 6, overflow: "hidden", cursor: "pointer", border: `2px solid ${ap === p.id ? (zCfg?.color || ac) : bd}` }}>
+                  {p.src
+                    ? <img src={p.src} alt="" style={{ width: "100%", height: 70, objectFit: "cover", display: "block" }} />
+                    : <div style={{ width: "100%", height: 70, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: (zCfg?.color || ac) + "12", borderBottom: `2px solid ${zCfg?.color || bd}` }}>
+                        <span style={{ fontSize: 20, opacity: 0.5 }}>⬆</span>
+                        <span style={{ fontSize: 8, fontFamily: ff, color: zCfg?.color || td, fontWeight: 600 }}>{zCfg?.label || "Upload"}</span>
+                      </div>
+                  }
                   <div style={{ padding: "3px 6px", fontSize: 9, fontFamily: ff, color: td, background: c1 }}>{p.nm.slice(0, 16)}</div>
-                </div>))}
+                </div>);
+              })}
             </div>
 
             {!ph ? <div style={{ ...cd, flex: 1, textAlign: "center", padding: 40, color: td }}>Select photo</div>
@@ -248,14 +269,35 @@ export default function PhotosTab({ pht, sPht, ap, sAp, sz, pj, iv, dsg, dAn }) 
                   <div style={{ ...cd, padding: 0, overflow: "hidden", position: "relative", userSelect: "none" }}
                     onMouseMove={overlay.handlers.handleDragMove} onMouseUp={overlay.handlers.handleDragEnd} onMouseLeave={overlay.handlers.handleDragEnd}
                     onTouchMove={overlay.handlers.handleDragMove} onTouchEnd={overlay.handlers.handleDragEnd}>
-                    <img ref={imgRef} src={ph.src} alt="" style={{
-                      width: "100%", display: "block", maxHeight: 520, objectFit: "contain",
-                      cursor: overlay.mode === "place" ? "crosshair" : "default",
-                    }} onClick={overlay.handlers.handleContainerClick} />
-                    {overlay.svgOverlay}
+                    {ph.src
+                      ? <img ref={imgRef} src={ph.src} alt="" style={{
+                          width: "100%", display: "block", maxHeight: 520, objectFit: "contain",
+                          cursor: overlay.mode === "place" ? "crosshair" : "default",
+                        }} onClick={overlay.handlers.handleContainerClick} />
+                      : <div ref={imgRef} style={{
+                          width: "100%", height: 520, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                          border: `3px dashed ${(ph.zn && ZONE_CFG[ph.zn]?.color) || bd}`, borderRadius: 8, background: ((ph.zn && ZONE_CFG[ph.zn]?.color) || ac) + "08",
+                          cursor: "pointer", position: "relative",
+                        }} onClick={() => document.getElementById("ph-upload-" + ph.id)?.click()}>
+                          <span style={{ fontSize: 48, opacity: 0.3, marginBottom: 8 }}>📷</span>
+                          <span style={{ fontFamily: ff, fontSize: 14, color: (ph.zn && ZONE_CFG[ph.zn]?.color) || td, fontWeight: 600 }}>
+                            Upload {ph.nm} Photo
+                          </span>
+                          <span style={{ fontFamily: ff, fontSize: 11, color: td, marginTop: 4, opacity: 0.6 }}>
+                            Click or drag image here
+                          </span>
+                          <input id={"ph-upload-" + ph.id} type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+                            const f = e.target.files?.[0]; if (!f) return;
+                            const r = new FileReader();
+                            r.onload = ev => updPh(x => ({ ...x, src: ev.target.result }));
+                            r.readAsDataURL(f);
+                          }} />
+                        </div>
+                    }
+                    {ph.src && overlay.svgOverlay}
 
                     {/* Zone equipment box overlays */}
-                    {importedBoxes.length > 0 && (
+                    {ph.src && importedBoxes.length > 0 && (
                       <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
                         {importedBoxes.map(b => (
                           <g key={b.zone}>

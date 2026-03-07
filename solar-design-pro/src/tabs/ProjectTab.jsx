@@ -12,7 +12,7 @@ const svcOpts = ["100","125","150","200","225","320","400"];
 export default function ProjectTab({
   pj, u, md, iv, sz, totalMods, totalKw, modGroups, addGroup, updGroup, delGroup,
   climBusy, climMsg, lookupClimate, climRan, invRec, setInvRec, recommendInverter,
-  ivList, addIv, updIv, delIv, ivs, totalIvKw,
+  ivList, addIv, updIv, delIv, ivs, totalIvKw, pickIv, calcOptQty,
   setTab, chat, addrQ, addrSug, addrOpen, addrLoading, addrRect, addrHi, addrRef, addrInpRef,
   searchAddr, pickAddr, setAddrOpen, updateRect, addrKey
 }) {
@@ -244,7 +244,7 @@ export default function ProjectTab({
 
         {/* Single inverter (legacy / no ivList entries) */}
         {ivList.length === 0 && (<>
-          <select style={{ ...inp, marginBottom: 8 }} value={iv?.id || ""} onChange={e => u("ii", e.target.value)}>
+          <select style={{ ...inp, marginBottom: 8 }} value={iv?.id || ""} onChange={e => pickIv(e.target.value)}>
             <option value="">— Select Inverter —</option>
             <optgroup label="SMA Sunny Boy Smart Energy">
               {INVS.filter(i => i.id.startsWith("sma")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}
@@ -274,7 +274,7 @@ export default function ProjectTab({
             <div key={entry.id} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
               {ei === 0 && <span style={{ fontSize: 9, fontFamily: ff, color: ac, fontWeight: 700, width: 46, flexShrink: 0 }}>Primary</span>}
               {ei > 0 && <span style={{ fontSize: 9, fontFamily: ff, color: td, width: 46, flexShrink: 0 }}>Inv {ei + 1}</span>}
-              <select style={{ ...inp, flex: 1 }} value={entry.model} onChange={e => updIv(entry.id, "model", e.target.value)}>
+              <select style={{ ...inp, flex: 1 }} value={entry.model} onChange={e => { updIv(entry.id, "model", e.target.value); updIv(entry.id, "qty", calcOptQty(e.target.value)); }}>
                 <option value="">— Select —</option>
                 <optgroup label="SMA">{INVS.filter(i => i.id.startsWith("sma")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}</optgroup>
                 <optgroup label="SolarEdge">{INVS.filter(i => i.id.startsWith("se")).map(i => <option key={i.id} value={i.id}>{i.nm} — {i.kw}kW</option>)}</optgroup>
@@ -287,7 +287,7 @@ export default function ProjectTab({
                 <label style={{ fontSize: 9, color: td, fontFamily: ff }}>Qty</label>
                 <input style={{ ...inp, width: 42, textAlign: "center" }} type="number" min={1} value={entry.qty} onChange={e => updIv(entry.id, "qty", Math.max(1, +e.target.value || 1))} />
               </div>
-              {eiv && <span style={{ fontSize: 10, fontFamily: ff, color: td, flexShrink: 0 }}>{(eiv.kw * entry.qty).toFixed(1)}kW</span>}
+              {eiv && <span style={{ fontSize: 10, fontFamily: ff, color: td, flexShrink: 0 }}>{(eiv.kw * entry.qty).toFixed(1)}kW{totalKw > 0 ? ` (${(totalKw / (eiv.kw * entry.qty)).toFixed(2)} DC:AC)` : ""}</span>}
               <button style={{ background: "none", border: "none", color: rd, cursor: "pointer", fontSize: 14, fontWeight: 700 }} onClick={() => delIv(entry.id)}>×</button>
             </div>
           );

@@ -1,8 +1,12 @@
-import { useState } from 'react';
-import { ff, c1, c2, bd, ac, tx, td, gn, rd, bt, cd, inp } from '../theme.js';
+import { useState, useRef } from 'react';
+import { ff, c1, c2, bd, ac, tx, td, gn, rd, bl, bt, cd, inp } from '../theme.js';
 import { SC } from '../data/markers.js';
+import { RAIL_OPTIONS, detectRows } from '../calc/racking.js';
 
 const PITCHES = [["0","Flat"],["5","1:12"],["10","2:12"],["14","3:12"],["18","4:12"],["22","5:12"],["27","6:12"],["30","7:12"],["34","8:12"],["37","9:12"],["40","10:12"],["45","12:12"]];
+
+// Racking overlay colors
+const RC = { rail: "#d48c00", foot: "#16a34a", splice: "#ef4444", mid: "#3b82f6", end: "#8b5cf6" };
 
 const compass = a => {
   const n = +a;
@@ -16,11 +20,52 @@ const compass = a => {
   return "N" + Math.round(360 - n) + "\u00b0W";
 };
 
+// ── Architectural dimension annotation helpers ──
+const DIM_STYLE = { stroke: "#000", strokeWidth: 0.4, fill: "none" };
+const DIM_FONT = { fontFamily: "system-ui, sans-serif", fontSize: 9, fill: "#000", textAnchor: "middle" };
+const TICK = 3, EXT = 4;
+
+function hDim(x1, x2, y, label, above = false, fontFam) {
+  const my = above ? y - EXT : y + EXT;
+  const ty = above ? my - 3 : my + 8;
+  const e1 = above ? [y, my - 1] : [y, my + 1];
+  const e2 = e1;
+  return (
+    <g>
+      <line x1={x1} y1={e1[0]} x2={x1} y2={e1[1]} {...DIM_STYLE} />
+      <line x1={x2} y1={e2[0]} x2={x2} y2={e2[1]} {...DIM_STYLE} />
+      <line x1={x1} y1={my} x2={x2} y2={my} {...DIM_STYLE} />
+      <line x1={x1} y1={my - TICK} x2={x1} y2={my + TICK} {...DIM_STYLE} strokeWidth={0.6} />
+      <line x1={x2} y1={my - TICK} x2={x2} y2={my + TICK} {...DIM_STYLE} strokeWidth={0.6} />
+      <text x={(x1 + x2) / 2} y={ty} {...DIM_FONT} fontFamily={fontFam}>{label}</text>
+    </g>
+  );
+}
+
+function vDim(y1, y2, x, label, left = true, fontFam) {
+  const mx = left ? x - EXT : x + EXT;
+  const tx = left ? mx - 3 : mx + 10;
+  const e1 = left ? [x, mx - 1] : [x, mx + 1];
+  return (
+    <g>
+      <line x1={e1[0]} y1={y1} x2={e1[1]} y2={y1} {...DIM_STYLE} />
+      <line x1={e1[0]} y1={y2} x2={e1[1]} y2={y2} {...DIM_STYLE} />
+      <line x1={mx} y1={y1} x2={mx} y2={y2} {...DIM_STYLE} />
+      <line x1={mx - TICK} y1={y1} x2={mx + TICK} y2={y1} {...DIM_STYLE} strokeWidth={0.6} />
+      <line x1={mx - TICK} y1={y2} x2={mx + TICK} y2={y2} {...DIM_STYLE} strokeWidth={0.6} />
+      <text x={tx} y={(y1 + y2) / 2} {...DIM_FONT} fontFamily={fontFam}
+        transform={`rotate(-90, ${tx}, ${(y1 + y2) / 2})`}>{label}</text>
+    </g>
+  );
+}
+
 export default function LayoutTab({
   md, iv, pj, totalMods, totalKw, modGroups, roofType, applyRoofPreset,
   addGroup, updGroup, delGroup, layPos, layDrag, setLayDrag, laySel, setLaySel,
   autoFillFace, resetGroupLayout, removeSelMod, addModToFace, snapPos,
-  updateModPos, faceScale, faceSz, SETBACK_FT, LAY_W, GAP, strMap
+  updateModPos, faceScale, faceSz, SETBACK_FT, LAY_W,
+  gapIn, setGapIn, strMap,
+  rack, rackCfg, setRackCfg
 }) {
   // Module dimensions in mm
   const lm = md?.lm || 1722, wm = md?.wm || 1134;
@@ -53,6 +98,39 @@ export default function LayoutTab({
         <div style={{ flex: 1 }} />
         <button onClick={addGroup} style={{ ...bt(true), fontSize: 11, padding: "5px 12px" }}>+ Add Face</button>
       </div>
+
+      {/* ═══ RACKING CONFIG ═══ */}
+      {md && rackCfg && (
+        <div style={{ ...cd, marginBottom: 14, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ fontFamily: ff, fontSize: 10, color: td, textTransform: "uppercase", letterSpacing: "0.08em" }}>Racking:</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontFamily: ff, fontSize: 9, color: td, textTransform: "uppercase" }}>Rail</span>
+            <select style={{ ...inp, width: 90, fontSize: 11 }} value={rackCfg.rail}
+              onChange={e => setRackCfg(p => ({ ...p, rail: e.target.value }))}>
+              {RAIL_OPTIONS.map(r => <option key={r} value={r}>{r === "auto" ? "Auto" : r}</option>)}
+            </select>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontFamily: ff, fontSize: 9, color: td, textTransform: "uppercase" }}>Max Span (in)</span>
+            <input type="number" style={{ ...inp, width: 56, fontSize: 11, textAlign: "center" }}
+              value={rackCfg.span || ""} placeholder="Auto" min={24} max={96}
+              onChange={e => setRackCfg(p => ({ ...p, span: +e.target.value || 0 }))} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontFamily: ff, fontSize: 9, color: td, textTransform: "uppercase" }}>Module Gap (in)</span>
+            <input type="number" style={{ ...inp, width: 56, fontSize: 11, textAlign: "center" }}
+              value={gapIn} min={0} max={2} step={0.25}
+              onChange={e => setGapIn(Math.max(0, Math.min(2, +e.target.value || 0)))} />
+          </div>
+          {rack && (
+            <>
+              <span style={{ fontFamily: ff, fontSize: 10, color: ac, fontWeight: 600 }}>{rack.railFamily}</span>
+              <span style={{ fontFamily: ff, fontSize: 10, color: td }}>{rack.foot} / {rack.maxSpan}" span</span>
+              {rack.isGround && <span style={{ fontFamily: ff, fontSize: 9, color: rd }}>Ground mount: post/beam system required separately</span>}
+            </>
+          )}
+        </div>
+      )}
 
       {/* ═══ EMPTY STATE ═══ */}
       {!md ? (
@@ -109,6 +187,117 @@ export default function LayoutTab({
                 });
               }
             }
+
+            // ── Racking overlay geometry ──
+            const rackOv = (() => {
+              if (!rack || mods.length === 0) return null;
+              const rows = detectRows(mods, sz);
+              if (rows.length === 0) return null;
+              const maxSpanPx = rack.maxSpan * sc * 25.4;
+              const ovPx = Math.min(sz.w * 0.15, 4 * sc * 25.4);
+              const pgData = rack.perGroup.find(p => p.gid === g.id);
+              const o = { rails: [], feet: [], splices: [], mid: [], end: [] };
+              rows.forEach((row, ri) => {
+                const xs = [...row.mods].sort((a, b) => a.x - b.x);
+                const x0 = Math.min(...xs.map(m => m.x));
+                const x1 = Math.max(...xs.map(m => m.x)) + sz.w;
+                const y0 = Math.min(...xs.map(m => m.y));
+                const rsx = x0 - ovPx, rex = x1 + ovPx, rlen = rex - rsx;
+                const ry1 = y0 + sz.h * 0.22, ry2 = y0 + sz.h * 0.78;
+                // Rails
+                o.rails.push({ x1: rsx, y1: ry1, x2: rex, y2: ry1 }, { x1: rsx, y1: ry2, x2: rex, y2: ry2 });
+                // Feet
+                [ry1, ry2].forEach(ry => {
+                  const nf = Math.max(2, Math.floor(rlen / maxSpanPx) + 1);
+                  const sp = rlen / Math.max(1, nf - 1);
+                  for (let i = 0; i < nf; i++) o.feet.push({ x: rsx + i * sp, y: ry });
+                });
+                // Splices
+                const pgRow = pgData?.rows?.[ri];
+                if (pgRow && pgRow.splices > 0) {
+                  let acc = 0;
+                  for (let si = 0; si < pgRow.segments.length - 1; si++) {
+                    acc += pgRow.segments[si].cutLen;
+                    const sx = rsx + (acc / pgRow.widthIn) * rlen;
+                    [ry1, ry2].forEach(ry => o.splices.push({ x: sx, y: ry }));
+                  }
+                }
+                // Mid clamps (between adjacent modules)
+                for (let i = 0; i < xs.length - 1; i++) {
+                  const cx = (xs[i].x + sz.w + xs[i + 1].x) / 2;
+                  [ry1, ry2].forEach(ry => o.mid.push({ x: cx, y: ry }));
+                }
+                // End clamps (outer edges)
+                [ry1, ry2].forEach(ry => {
+                  o.end.push({ x: x0 - ovPx * 0.3, y: ry }, { x: x1 + ovPx * 0.3, y: ry });
+                });
+              });
+              return o;
+            })();
+
+            // ── Foot map data computation ──
+            const footMap = (() => {
+              if (!rack || mods.length === 0) return null;
+              const rows = detectRows(mods, sz);
+              if (rows.length === 0) return null;
+              const maxSpanPx = rack.maxSpan * sc * 25.4;
+              const ovPx = Math.min(sz.w * 0.15, 4 * sc * 25.4);
+              const pxIn = px => +(px / (sc * 25.4)).toFixed(1);
+              const allFeet = [];
+              const rowData = [];
+              let svgMinX = Infinity, svgMaxX = -Infinity, svgMinY = Infinity, svgMaxY = -Infinity;
+
+              rows.forEach(row => {
+                const xs = [...row.mods].sort((a, b) => a.x - b.x);
+                const x0 = Math.min(...xs.map(m => m.x));
+                const x1 = Math.max(...xs.map(m => m.x)) + sz.w;
+                const y0 = Math.min(...xs.map(m => m.y));
+                const rsx = x0 - ovPx, rex = x1 + ovPx, rlen = rex - rsx;
+                const ry1 = y0 + sz.h * 0.22, ry2 = y0 + sz.h * 0.78;
+
+                // Foot positions along each rail
+                const nf = Math.max(2, Math.floor(rlen / maxSpanPx) + 1);
+                const sp = rlen / Math.max(1, nf - 1);
+                const cols = [];
+                for (let i = 0; i < nf; i++) cols.push({ x: rsx + i * sp, ry1, ry2 });
+
+                allFeet.push(...cols.flatMap(c => [{ x: c.x, y: c.ry1 }, { x: c.x, y: c.ry2 }]));
+
+                // Module positions for ghost outlines
+                const modRects = xs.map(m => ({ x: m.x, y: m.y, w: sz.w, h: sz.h }));
+
+                // Dimensions in inches
+                const ovIn = pxIn(ovPx);
+                const spIn = nf > 1 ? pxIn(sp) : 0;
+                const railGapIn = pxIn(ry2 - ry1);
+                const topIn = pxIn(ry1 - y0);
+                const botIn = pxIn((y0 + sz.h) - ry2);
+
+                rowData.push({ cols, ry1, ry2, rsx, rex, modRects, y0, ovIn, spIn, railGapIn, topIn, botIn });
+
+                // Update bounding box
+                modRects.forEach(r => {
+                  if (r.x < svgMinX) svgMinX = r.x;
+                  if (r.x + r.w > svgMaxX) svgMaxX = r.x + r.w;
+                  if (r.y < svgMinY) svgMinY = r.y;
+                  if (r.y + r.h > svgMaxY) svgMaxY = r.y + r.h;
+                });
+                if (rsx < svgMinX) svgMinX = rsx;
+                if (rex > svgMaxX) svgMaxX = rex;
+              });
+
+              const pad = 30;
+              return {
+                rows: rowData,
+                feet: allFeet,
+                vb: {
+                  x: svgMinX - pad,
+                  y: svgMinY - pad,
+                  w: (svgMaxX - svgMinX) + pad * 2,
+                  h: (svgMaxY - svgMinY) + pad * 2
+                }
+              };
+            })();
 
             return (
               <div key={g.id} style={{ ...cd, marginBottom: 14 }}>
@@ -175,7 +364,7 @@ export default function LayoutTab({
                   <div style={{ width: LAY_W * z, height: canH * z }}>
                     {/* ──── Interactive Canvas ──── */}
                     <div style={{
-                      position: "relative", width: LAY_W, height: canH, background: "#0c1929",
+                      position: "relative", width: LAY_W, height: canH, background: "#ffffff",
                       transform: `scale(${z})`, transformOrigin: "0 0",
                       cursor: "default", userSelect: "none"
                     }}
@@ -199,7 +388,7 @@ export default function LayoutTab({
                       <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
                         <defs>
                           <pattern id={`grid-${g.id}`} width={gridStep} height={gridStep} patternUnits="userSpaceOnUse">
-                            <path d={`M ${gridStep} 0 L 0 0 0 ${gridStep}`} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="0.5" />
+                            <path d={`M ${gridStep} 0 L 0 0 0 ${gridStep}`} fill="none" stroke="rgba(0,0,0,0.07)" strokeWidth="0.5" />
                           </pattern>
                         </defs>
                         <rect width="100%" height="100%" fill={`url(#grid-${g.id})`} />
@@ -207,27 +396,27 @@ export default function LayoutTab({
                         {/* Setback lines */}
                         {sbPx > 0 && <>
                           <rect x={sbPx} y={sbPx} width={Math.max(0, LAY_W - 2 * sbPx)} height={Math.max(0, canH - 2 * sbPx)}
-                            fill="none" stroke="rgba(220,38,38,0.25)" strokeWidth="1" strokeDasharray="6 3" />
-                          <text x={sbPx + 4} y={sbPx - 4} fill="rgba(220,38,38,0.4)" fontSize="8" fontFamily={ff}>
+                            fill="none" stroke="rgba(220,38,38,0.4)" strokeWidth="1" strokeDasharray="6 3" />
+                          <text x={sbPx + 4} y={sbPx - 4} fill="rgba(220,38,38,0.6)" fontSize="8" fontFamily={ff}>
                             {SETBACK_FT}ft setback
                           </text>
                         </>}
 
                         {/* Compass indicator */}
                         <g transform={`translate(${LAY_W - 30}, 28)`}>
-                          <circle r="14" fill="rgba(0,0,0,0.4)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-                          <line x1="0" y1="6" x2="0" y2="-10" stroke="rgba(220,38,38,0.7)" strokeWidth="1.5" />
-                          <text x="0" y="-12" textAnchor="middle" fill="rgba(220,38,38,0.7)" fontSize="7" fontFamily={ff} fontWeight="700">N</text>
-                          <text x="0" y="14" textAnchor="middle" fill="rgba(255,255,255,0.25)" fontSize="6" fontFamily={ff}>
+                          <circle r="14" fill="rgba(255,255,255,0.85)" stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
+                          <line x1="0" y1="6" x2="0" y2="-10" stroke="rgba(220,38,38,0.8)" strokeWidth="1.5" />
+                          <text x="0" y="-12" textAnchor="middle" fill="rgba(220,38,38,0.8)" fontSize="7" fontFamily={ff} fontWeight="700">N</text>
+                          <text x="0" y="14" textAnchor="middle" fill="rgba(0,0,0,0.4)" fontSize="6" fontFamily={ff}>
                             {compass(g.az || 0)}
                           </text>
                         </g>
 
                         {/* Dimension labels */}
-                        <text x={LAY_W / 2} y={canH - 4} textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="9" fontFamily={ff}>
+                        <text x={LAY_W / 2} y={canH - 4} textAnchor="middle" fill="rgba(0,0,0,0.25)" fontSize="9" fontFamily={ff}>
                           {g.fw || "—"}ft
                         </text>
-                        <text x={6} y={canH / 2} fill="rgba(255,255,255,0.2)" fontSize="9" fontFamily={ff}
+                        <text x={6} y={canH / 2} fill="rgba(0,0,0,0.25)" fontSize="9" fontFamily={ff}
                           transform={`rotate(-90, 6, ${canH / 2})`} textAnchor="middle">
                           {g.fd || "—"}ft
                         </text>
@@ -238,6 +427,41 @@ export default function LayoutTab({
                             ? <line key={`g${i}`} x1={gl.x} y1={0} x2={gl.x} y2={canH} stroke="rgba(212,140,0,0.5)" strokeWidth="0.5" strokeDasharray="3 2" />
                             : <line key={`g${i}`} x1={0} y1={gl.y} x2={LAY_W} y2={gl.y} stroke="rgba(212,140,0,0.5)" strokeWidth="0.5" strokeDasharray="3 2" />
                         )}
+
+                        {/* ── Racking Overlay ── */}
+                        {rackOv && <>
+                          {/* Rails */}
+                          {rackOv.rails.map((r, i) => (
+                            <line key={`rl${i}`} x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2}
+                              stroke={RC.rail} strokeWidth="2.5" strokeLinecap="round" opacity="0.75" />
+                          ))}
+                          {/* Feet (FlashFoot2 / L-Foot) */}
+                          {rackOv.feet.map((f, i) => (
+                            <g key={`ft${i}`}>
+                              <circle cx={f.x} cy={f.y} r="4" fill={RC.foot} opacity="0.85" />
+                              <circle cx={f.x} cy={f.y} r="4" fill="none" stroke="#fff" strokeWidth="0.5" />
+                            </g>
+                          ))}
+                          {/* Splices */}
+                          {rackOv.splices.map((s, i) => (
+                            <g key={`sp${i}`}>
+                              <rect x={s.x - 5} y={s.y - 4} width="10" height="8" rx="1.5"
+                                fill={RC.splice} opacity="0.85" />
+                              <line x1={s.x - 2} y1={s.y} x2={s.x + 2} y2={s.y}
+                                stroke="#fff" strokeWidth="1" />
+                            </g>
+                          ))}
+                          {/* Mid Clamps */}
+                          {rackOv.mid.map((c, i) => (
+                            <line key={`mc${i}`} x1={c.x} y1={c.y - 4} x2={c.x} y2={c.y + 4}
+                              stroke={RC.mid} strokeWidth="2" strokeLinecap="round" opacity="0.8" />
+                          ))}
+                          {/* End Clamps */}
+                          {rackOv.end.map((c, i) => (
+                            <line key={`ec${i}`} x1={c.x} y1={c.y - 5} x2={c.x} y2={c.y + 5}
+                              stroke={RC.end} strokeWidth="2.5" strokeLinecap="round" opacity="0.8" />
+                          ))}
+                        </>}
                       </svg>
 
                       {/* Rendered Modules */}
@@ -256,8 +480,8 @@ export default function LayoutTab({
                               top: m.y,
                               width: sz.w,
                               height: sz.h,
-                              background: isSel ? "rgba(212,140,0,0.85)" : hasStr ? sc2 + "60" : "#1e3a5f",
-                              border: isSel ? `2px solid ${ac}` : hasStr ? `1px solid ${sc2}` : "1px solid rgba(30,58,95,0.6)",
+                              background: isSel ? "rgba(212,140,0,0.85)" : hasStr ? sc2 + "30" : "rgba(30,58,95,0.18)",
+                              border: isSel ? `2px solid ${ac}` : hasStr ? `1px solid ${sc2}70` : "1px solid rgba(30,58,95,0.35)",
                               borderRadius: 2,
                               cursor: "grab",
                               display: "flex",
@@ -265,7 +489,7 @@ export default function LayoutTab({
                               justifyContent: "center",
                               fontSize: bigEnough ? 8 : 6,
                               fontFamily: ff,
-                              color: isSel ? "#000" : "rgba(255,255,255,0.85)",
+                              color: isSel ? "#000" : "rgba(0,0,0,0.6)",
                               fontWeight: 600,
                               boxSizing: "border-box",
                               zIndex: isSel ? 10 : 1
@@ -298,6 +522,18 @@ export default function LayoutTab({
                   <span>{mods.length} of {mods.length} placed</span>
                 </div>
 
+                {/* ──── Racking Legend ──── */}
+                {rackOv && (
+                  <div style={{ display: "flex", gap: 12, marginTop: 5, flexWrap: "wrap", alignItems: "center" }}>
+                    {[["Rail", RC.rail, "━"], ["Foot", RC.foot, "\u25cf"], ["Splice", RC.splice, "\u25a0"], ["Mid Clamp", RC.mid, "\u2502"], ["End Clamp", RC.end, "\u2503"]].map(([l, c, ic]) => (
+                      <div key={l} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span style={{ color: c, fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{ic}</span>
+                        <span style={{ fontFamily: ff, fontSize: 8, color: td }}>{l}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* ──── String Legend ──── */}
                 {strMap?.[g.id]?.length > 0 && (() => {
                   const strs = [...new Set(strMap[g.id])];
@@ -310,6 +546,140 @@ export default function LayoutTab({
                           <span style={{ fontFamily: ff, fontSize: 9, color: tx, fontWeight: 600 }}>S{s + 1}</span>
                         </div>
                       ))}
+                    </div>
+                  );
+                })()}
+
+                {/* ──── Per-Group Racking Summary ──── */}
+                {rack && (() => {
+                  const pg = rack.perGroup.find(p => p.gid === g.id);
+                  if (!pg || pg.rows.length === 0) return null;
+                  return (
+                    <div style={{ marginTop: 10, borderTop: `1px solid ${bd}`, paddingTop: 8 }}>
+                      <div style={{ fontFamily: ff, fontSize: 10, color: ac, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
+                        Racking — {pg.modCount} modules, {pg.rows.length} row{pg.rows.length !== 1 ? "s" : ""}
+                      </div>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: ff, fontSize: 10 }}>
+                        <thead>
+                          <tr style={{ color: td, textTransform: "uppercase", fontSize: 8, letterSpacing: "0.05em" }}>
+                            <th style={{ textAlign: "left", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>Row</th>
+                            <th style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>Mods</th>
+                            <th style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>Width</th>
+                            <th style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>Rails</th>
+                            <th style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>Splices</th>
+                            <th style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>Feet</th>
+                            <th style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>Mid</th>
+                            <th style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>End</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pg.rows.map((row, ri) => (
+                            <tr key={ri} style={{ color: tx }}>
+                              <td style={{ padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>R{ri + 1}</td>
+                              <td style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>{row.count}</td>
+                              <td style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>{row.widthIn}"</td>
+                              <td style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>
+                                {row.rails} ({row.segments.map(s => s.stock.len + '"').join("+")})
+                              </td>
+                              <td style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>{row.splices || "—"}</td>
+                              <td style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>{row.feet}</td>
+                              <td style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>{row.midClamps}</td>
+                              <td style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>{row.endClamps}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
+                {/* ──── Foot Center Locations Map ──── */}
+                {footMap && (() => {
+                  const fm = footMap;
+                  const r0 = fm.rows[0];
+                  const svgId = `foot-map-${g.id}`;
+                  const printFootMap = () => {
+                    const svgEl = document.getElementById(svgId);
+                    if (!svgEl) return;
+                    const w = window.open('', '_blank');
+                    w.document.write(`<!DOCTYPE html><html><head><title>Foot Centers — ${g.nm || 'Face'}</title>
+                      <style>body{margin:20px;text-align:center}svg{max-width:100%;height:auto}
+                      h2{font-family:system-ui;font-size:16px;margin-bottom:12px}</style></head>
+                      <body><h2>FOOT CENTER LOCATIONS — ${g.nm || 'Face'}</h2>${svgEl.outerHTML}</body></html>`);
+                    w.document.close();
+                    setTimeout(() => w.print(), 300);
+                  };
+
+                  return (
+                    <div style={{ marginTop: 10, borderTop: `1px solid ${bd}`, paddingTop: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                        <span style={{ fontFamily: ff, fontSize: 10, color: ac, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                          Foot Center Locations{g.nm ? ` — ${g.nm}` : ""}
+                        </span>
+                        <div style={{ flex: 1 }} />
+                        <button onClick={printFootMap} style={{ ...bt(false), fontSize: 9, padding: "3px 8px" }}>Print</button>
+                      </div>
+
+                      <svg id={svgId} viewBox={`${fm.vb.x} ${fm.vb.y} ${fm.vb.w} ${fm.vb.h}`}
+                        style={{ width: "100%", maxHeight: 400, background: "#fff", borderRadius: 4, border: `1px solid ${bd}` }}>
+                        {/* Ghost module outlines */}
+                        {fm.rows.map((row, ri) =>
+                          row.modRects.map((r, mi) => (
+                            <rect key={`gm${ri}-${mi}`} x={r.x} y={r.y} width={r.w} height={r.h}
+                              fill="none" stroke="#ccc" strokeWidth={0.5} strokeDasharray="4 2" />
+                          ))
+                        )}
+
+                        {/* Thin rail reference lines */}
+                        {fm.rows.map((row, ri) => (
+                          <g key={`rl${ri}`}>
+                            <line x1={row.rsx} y1={row.ry1} x2={row.rex} y2={row.ry1}
+                              stroke="#bbb" strokeWidth={0.3} />
+                            <line x1={row.rsx} y1={row.ry2} x2={row.rex} y2={row.ry2}
+                              stroke="#bbb" strokeWidth={0.3} />
+                          </g>
+                        ))}
+
+                        {/* Foot centers with crosshairs */}
+                        {fm.feet.map((f, i) => (
+                          <g key={`f${i}`}>
+                            <circle cx={f.x} cy={f.y} r={5} fill="#000" />
+                            <line x1={f.x - 8} y1={f.y} x2={f.x + 8} y2={f.y} stroke="#000" strokeWidth={0.4} />
+                            <line x1={f.x} y1={f.y - 8} x2={f.x} y2={f.y + 8} stroke="#000" strokeWidth={0.4} />
+                          </g>
+                        ))}
+
+                        {/* Horizontal dimension chain below first row */}
+                        {r0 && r0.cols.length >= 2 && (() => {
+                          const dimY = r0.modRects[r0.modRects.length - 1].y + r0.modRects[0].h + 6;
+                          const elems = [];
+                          // Left overhang
+                          elems.push(hDim(r0.modRects[0].x, r0.cols[0].x, dimY, `${r0.ovIn}"`, false, ff));
+                          // Spans between feet
+                          for (let i = 0; i < r0.cols.length - 1; i++) {
+                            elems.push(hDim(r0.cols[i].x, r0.cols[i + 1].x, dimY, `${r0.spIn}"`, false, ff));
+                          }
+                          // Right overhang
+                          const lastMod = r0.modRects[r0.modRects.length - 1];
+                          elems.push(hDim(r0.cols[r0.cols.length - 1].x, lastMod.x + lastMod.w, dimY, `${r0.ovIn}"`, false, ff));
+                          return elems;
+                        })()}
+
+                        {/* Vertical dimensions left of first row */}
+                        {r0 && (() => {
+                          const dimX = r0.modRects[0].x - 6;
+                          return (
+                            <g>
+                              {vDim(r0.y0, r0.ry1, dimX, `${r0.topIn}"`, true, ff)}
+                              {vDim(r0.ry1, r0.ry2, dimX - 14, `${r0.railGapIn}"`, true, ff)}
+                              {vDim(r0.ry2, r0.y0 + r0.modRects[0].h, dimX, `${r0.botIn}"`, true, ff)}
+                            </g>
+                          );
+                        })()}
+                      </svg>
+
+                      <div style={{ fontFamily: ff, fontSize: 9, color: td, marginTop: 4 }}>
+                        Overhang: {r0?.ovIn}" | Spacing: {r0?.spIn}" | Rail gap: {r0?.railGapIn}"
+                      </div>
                     </div>
                   );
                 })()}
@@ -338,6 +708,95 @@ export default function LayoutTab({
                   {md.nm} ({md.w}W)
                 </span>
               )}
+            </div>
+          )}
+
+          {/* ═══ CUT LIST ═══ */}
+          {rack && rack.cutList.length > 0 && (
+            <div style={{ ...cd, marginTop: 14 }}>
+              <div style={{ fontFamily: ff, fontSize: 12, color: ac, fontWeight: 700, marginBottom: 8 }}>
+                Rail Cut List
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: ff, fontSize: 10 }}>
+                <thead>
+                  <tr style={{ color: td, textTransform: "uppercase", fontSize: 8, letterSpacing: "0.05em" }}>
+                    <th style={{ textAlign: "left", padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>#</th>
+                    <th style={{ textAlign: "left", padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>Stock Rail</th>
+                    <th style={{ textAlign: "left", padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>Pieces Cut</th>
+                    <th style={{ textAlign: "right", padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>Used</th>
+                    <th style={{ textAlign: "right", padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>Waste</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rack.cutList.map((bin, i) => (
+                    <tr key={i} style={{ color: tx }}>
+                      <td style={{ padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>{i + 1}</td>
+                      <td style={{ padding: "3px 6px", borderBottom: `1px solid ${bd}`, fontWeight: 600 }}>
+                        {bin.stock.len}" ({bin.stock.pn})
+                      </td>
+                      <td style={{ padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>
+                        {bin.pieces.map((p, j) => (
+                          <span key={j} style={{
+                            display: "inline-block", background: c2, borderRadius: 3,
+                            padding: "1px 5px", marginRight: 4, fontSize: 9
+                          }}>
+                            {p.len}" <span style={{ color: td }}>{p.label}</span>
+                          </span>
+                        ))}
+                      </td>
+                      <td style={{ textAlign: "right", padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>
+                        {bin.used.toFixed(1)}"
+                      </td>
+                      <td style={{ textAlign: "right", padding: "3px 6px", borderBottom: `1px solid ${bd}`, color: bin.waste > 24 ? rd : td }}>
+                        {bin.waste.toFixed(1)}"
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{ display: "flex", gap: 16, marginTop: 6, fontFamily: ff, fontSize: 10, color: td }}>
+                <span>{rack.cutList.length} stock rail{rack.cutList.length !== 1 ? "s" : ""} to purchase</span>
+                <span>Total waste: {rack.waste}%</span>
+              </div>
+            </div>
+          )}
+
+          {/* ═══ RACKING BOM ═══ */}
+          {rack && rack.bom.length > 0 && (
+            <div style={{ ...cd, marginTop: 14 }}>
+              <div style={{ fontFamily: ff, fontSize: 12, color: ac, fontWeight: 700, marginBottom: 8 }}>
+                Racking Hardware BOM
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: ff, fontSize: 10 }}>
+                <thead>
+                  <tr style={{ color: td, textTransform: "uppercase", fontSize: 8, letterSpacing: "0.05em" }}>
+                    <th style={{ textAlign: "left", padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>Item</th>
+                    <th style={{ textAlign: "center", padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>Qty</th>
+                    <th style={{ textAlign: "center", padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>Unit</th>
+                    <th style={{ textAlign: "right", padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>Unit $</th>
+                    <th style={{ textAlign: "right", padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>Line $</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rack.bom.map((item, i) => (
+                    <tr key={i} style={{ color: tx }}>
+                      <td style={{ padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>{item.d}</td>
+                      <td style={{ textAlign: "center", padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>{item.q}</td>
+                      <td style={{ textAlign: "center", padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>{item.u}</td>
+                      <td style={{ textAlign: "right", padding: "3px 6px", borderBottom: `1px solid ${bd}` }}>${item.$.toFixed(2)}</td>
+                      <td style={{ textAlign: "right", padding: "3px 6px", borderBottom: `1px solid ${bd}`, fontWeight: 600 }}>${item.t.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr style={{ color: ac, fontWeight: 700 }}>
+                    <td colSpan={4} style={{ padding: "4px 6px", textAlign: "right", borderTop: `2px solid ${bd}` }}>Total:</td>
+                    <td style={{ textAlign: "right", padding: "4px 6px", borderTop: `2px solid ${bd}` }}>
+                      ${rack.bom.reduce((s, it) => s + it.t, 0).toFixed(2)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           )}
         </>

@@ -10,6 +10,7 @@ import { DEFAULT_LOGO } from './data/logo.js';
 // ── Calc ──
 import { strCalc } from './calc/string-calc.js';
 import { mkPack } from './calc/pack-list.js';
+import { calcRacking } from './calc/racking.js';
 
 // ── API ──
 import { callClaude, cleanJson } from './api/anthropic.js';
@@ -35,11 +36,19 @@ import PlansTab from './tabs/PlansTab.jsx';
 import PhotosTab from './tabs/PhotosTab.jsx';
 import PackListTab from './tabs/PackListTab.jsx';
 
+// ── LocalStorage helpers ──
+const SAVE_KEY = "sdp_project";
+function loadSaved() {
+  try { const s = localStorage.getItem(SAVE_KEY); return s ? JSON.parse(s) : null; } catch { return null; }
+}
+
 export default function App() {
+  const saved = useRef(loadSaved());
+
   // ── Core State ──
   const [tab, setTab] = useState("project");
-  const [pj, sPj] = useState({ nm: "", ad: "", ct: "", st: "", zp: "", kw: "", mt: "roof", rf: "asphalt", rp: "", es: "200", ds: "", eq: "", nt: "", tl: "", th: "", ir: "", ps: "", mi: "", ii: "" });
-  const [geo, setGeo] = useState(null);
+  const [pj, sPj] = useState(saved.current?.pj || { nm: "", ad: "", ct: "", st: "", zp: "", kw: "", mt: "roof", rf: "asphalt", rp: "", es: "200", ds: "", eq: "", nt: "", tl: "", th: "", ir: "", ps: "", mi: "", ii: "" });
+  const [geo, setGeo] = useState(saved.current?.geo || null);
   const climRan = useRef(false);
   const u = (k, v) => sPj(p => ({ ...p, [k]: v }));
 
@@ -54,14 +63,17 @@ export default function App() {
   const md = MODS.find(x => x.id === pj.mi), iv = INVS.find(x => x.id === pj.ii);
 
   // ── Wire Run Lengths ──
-  const [wr, sWr] = useState({ pv: 0, dc: 0, ac: 0, se: 0, gec: 0 });
+  const [wr, sWr] = useState(saved.current?.wr || { pv: 0, dc: 0, ac: 0, se: 0, gec: 0 });
   const uWr = (k, v) => sWr(p => ({ ...p, [k]: +v || 0 }));
 
   // ── Design State ──
-  const [dsg, sDsg] = useState(null), [pk, sPk] = useState([]);
+  const [dsg, sDsg] = useState(saved.current?.dsg || null), [pk, sPk] = useState([]);
   const [ms, sMs] = useState([]), [ci, sCi] = useState(""), [cb, sCb] = useState(false);
   const [pnl, sPnl] = useState([]), [mkr, sMkr] = useState([]), [tl2, sTl] = useState("select"), [as2, sAs] = useState(0), [em, sEm] = useState(null);
-  const [pht, sPht] = useState([]), [ap, sAp] = useState(null);
+  const [pht, sPht] = useState([
+    { id: 1, src: null, nm: "Exterior Wall", ds: "", mk: [], ln: [], zn: "exterior" },
+    { id: 2, src: null, nm: "Basement", ds: "", mk: [], ln: [], zn: "basement" },
+  ]), [ap, sAp] = useState(1);
   const [dAn, sDan] = useState({ mk: [], ln: [] });
   const [logo, setLogo] = useState(DEFAULT_LOGO);
   const logoRef = useRef(null);
@@ -70,7 +82,7 @@ export default function App() {
   const [invRec, setInvRec] = useState("");
 
   // ── Multi-Inverter List ──
-  const [ivList, sIvList] = useState([]);
+  const [ivList, sIvList] = useState(saved.current?.ivList || []);
   const addIv = () => sIvList(l => [...l, { id: Date.now(), model: iv?.id || "", qty: 1 }]);
   const updIv = (id, k, v) => sIvList(l => l.map(e => e.id === id ? { ...e, [k]: v } : e));
   const delIv = (id) => sIvList(l => l.filter(e => e.id !== id));
@@ -85,20 +97,44 @@ export default function App() {
   }, [ivList]);
 
   // ── Module Groups ──
-  const [roofType, setRoofType] = useState("gable");
-  const [modGroups, setModGroups] = useState([{ id: 1, nm: "South Face", az: "180", ori: "L", cnt: "", rp: "", fw: "30", fd: "18" }]);
+  const [roofType, setRoofType] = useState(saved.current?.roofType || "gable");
+  const [modGroups, setModGroups] = useState(saved.current?.modGroups || [{ id: 1, nm: "South Face", az: "180", ori: "L", cnt: "", rp: "", fw: "30", fd: "18" }]);
   const addGroup = () => setModGroups(g => [...g, { id: Date.now(), nm: `Face ${g.length + 1}`, az: "180", ori: "L", cnt: "", rp: "", fw: "30", fd: "18" }]);
   const updGroup = (id, k, v) => setModGroups(g => g.map(x => x.id === id ? { ...x, [k]: v } : x));
   const delGroup = (id) => setModGroups(g => g.length > 1 ? g.filter(x => x.id !== id) : g);
   const totalMods = modGroups.reduce((s, g) => s + (+g.cnt || 0), 0);
   const totalKw = md ? (totalMods * md.w / 1000) : 0;
 
+  // ── Auto-calculate optimal inverter qty for DC:AC ≈ 1.20 ──
+  const calcOptQty = useCallback((invId) => {
+    const inv = INVS.find(x => x.id === invId);
+    if (!inv) return 1;
+    if (inv.tp === "micro") return totalMods || 1;
+    if (totalKw <= 0) return 1;
+    return Math.max(1, Math.round(totalKw / (inv.kw * 1.20)));
+  }, [totalKw, totalMods]);
+
+  // Pick inverter: create/replace ivList entry with auto qty
+  const pickIv = useCallback((invId) => {
+    u("ii", invId);
+    if (!invId) { sIvList([]); return; }
+    const q = calcOptQty(invId);
+    sIvList([{ id: Date.now(), model: invId, qty: q }]);
+  }, [calcOptQty]);
+
   // ── Layout State ──
   const [layPos, setLayPos] = useState({});
   const [layDrag, setLayDrag] = useState(null);
   const [laySel, setLaySel] = useState(null);
-  const LAY_W = 840, SNAP = 8, GAP = 2;
+  const LAY_W = 840, SNAP = 8;
   const SETBACK_FT = 3;
+
+  // ── Racking Config ──
+  const [rackCfg, setRackCfg] = useState({ rail: "auto", span: 0 });
+
+  // ── Module Gap (inches, converted to px per group scale) ──
+  const [gapIn, setGapIn] = useState(0.75);
+  const gapPx = (fw) => Math.max(1, Math.round(gapIn * 25.4 * faceScale(fw)));
 
   const faceScale = (fw) => LAY_W / ((+fw || 30) * 12 * 25.4);
   const faceSz = (ori, fw) => {
@@ -114,27 +150,45 @@ export default function App() {
     return ori === "L" ? { w: Math.round(lm * sc), h: Math.round(wm * sc) } : { w: Math.round(wm * sc), h: Math.round(lm * sc) };
   };
 
-  // ── Layout position sync ──
+  // ── Layout position sync (resets on orientation/width/module/gap change) ──
+  const prevOri = useRef({});
+  const prevMdId = useRef(null);
+  const prevGap = useRef(gapIn);
   useEffect(() => {
     if (!md) return;
+    // Detect module change (dimensions changed)
+    const mdChanged = prevMdId.current != null && prevMdId.current !== md.id;
+    prevMdId.current = md.id;
+    // Detect gap change
+    const gapChanged = prevGap.current !== gapIn;
+    prevGap.current = gapIn;
+    // Detect orientation or face-width changes
+    const oriChanges = new Set();
+    modGroups.forEach(g => {
+      const key = `${g.ori}-${g.fw}`;
+      if (prevOri.current[g.id] && prevOri.current[g.id] !== key) oriChanges.add(g.id);
+      prevOri.current[g.id] = key;
+    });
     setLayPos(prev => {
       const next = { ...prev };
       modGroups.forEach(g => {
         const cnt = +g.cnt || 0;
         if (cnt === 0) { delete next[g.id]; return; }
         const old = prev[g.id] || [];
-        if (old.length === cnt) return;
+        const reset = oriChanges.has(g.id) || mdChanged || gapChanged;
+        if (old.length === cnt && !reset) return;
         const sz = faceSz(g.ori, g.fw);
         const sc = faceScale(g.fw);
         const sb = SETBACK_FT * 12 * 25.4 * sc;
         const usableW = LAY_W - 2 * sb;
-        const cols = Math.max(1, Math.floor((usableW + GAP) / (sz.w + GAP)));
+        const gp = gapPx(g.fw);
+        const cols = Math.max(1, Math.floor((usableW + gp) / (sz.w + gp)));
         const arr = [];
         for (let i = 0; i < cnt; i++) {
-          if (i < old.length) { arr.push(old[i]); }
+          if (i < old.length && !reset) { arr.push(old[i]); }
           else {
             const r = Math.floor(i / cols), c = i % cols;
-            arr.push({ id: i, x: sb + c * (sz.w + GAP), y: sb + r * (sz.h + GAP) });
+            arr.push({ id: i, x: sb + c * (sz.w + gp), y: sb + r * (sz.h + gp) });
           }
         }
         next[g.id] = arr.slice(0, cnt);
@@ -142,7 +196,7 @@ export default function App() {
       Object.keys(next).forEach(k => { if (!modGroups.find(g => g.id === +k || g.id === k)) delete next[k]; });
       return next;
     });
-  }, [modGroups, md]);
+  }, [modGroups, md, gapIn]);
 
   const snapPos = (gid, idx, rawX, rawY, ori, fw) => {
     const mods = layPos[gid] || [];
@@ -152,8 +206,9 @@ export default function App() {
     mods.forEach((m, i) => {
       if (m.id === idx) return;
       const ms = sz;
-      edges.xs.push(m.x, m.x + ms.w, m.x - sz.w - GAP, m.x + ms.w + GAP);
-      edges.ys.push(m.y, m.y + ms.h, m.y - sz.h - GAP, m.y + ms.h + GAP);
+      const gp = fw ? gapPx(fw) : 2;
+      edges.xs.push(m.x, m.x + ms.w, m.x - sz.w - gp, m.x + ms.w + gp);
+      edges.ys.push(m.y, m.y + ms.h, m.y - sz.h - gp, m.y + ms.h + gp);
     });
     let bestDx = SNAP + 1;
     for (const ex of edges.xs) { const d = Math.abs(rawX - ex); if (d < bestDx) { bestDx = d; bx = ex; } }
@@ -174,11 +229,12 @@ export default function App() {
     const sc = faceScale(g.fw);
     const sb = SETBACK_FT * 12 * 25.4 * sc;
     const usableW = LAY_W - 2 * sb;
-    const cols = Math.max(1, Math.floor((usableW + GAP) / (sz.w + GAP)));
+    const gp = gapPx(g.fw);
+    const cols = Math.max(1, Math.floor((usableW + gp) / (sz.w + gp)));
     const arr = [];
     for (let i = 0; i < cnt; i++) {
       const r = Math.floor(i / cols), c = i % cols;
-      arr.push({ id: i, x: sb + c * (sz.w + GAP), y: sb + r * (sz.h + GAP) });
+      arr.push({ id: i, x: sb + c * (sz.w + gp), y: sb + r * (sz.h + gp) });
     }
     setLayPos(prev => ({ ...prev, [gid]: arr }));
   };
@@ -225,15 +281,15 @@ export default function App() {
     const canW = LAY_W, canH = (+g.fd || 18) * 12 * 25.4 * sc;
     const sz = faceSz(g.ori, g.fw);
     const usableW = canW - 2 * sb, usableH = canH - 2 * sb;
-    const gapPx = Math.max(1, Math.round(GAP));
-    const cols = Math.max(1, Math.floor((usableW + gapPx) / (sz.w + gapPx)));
-    const rows = Math.max(1, Math.floor((usableH + gapPx) / (sz.h + gapPx)));
+    const gp = gapPx(g.fw);
+    const cols = Math.max(1, Math.floor((usableW + gp) / (sz.w + gp)));
+    const rows = Math.max(1, Math.floor((usableH + gp) / (sz.h + gp)));
     const cnt = cols * rows;
     if (cnt <= 0) return;
     updGroup(gid, "cnt", String(cnt));
     const arr = [];
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-      arr.push({ id: r * cols + c, x: sb + c * (sz.w + gapPx), y: sb + r * (sz.h + gapPx) });
+      arr.push({ id: r * cols + c, x: sb + c * (sz.w + gp), y: sb + r * (sz.h + gp) });
     }
     setLayPos(prev => ({ ...prev, [gid]: arr }));
   };
@@ -277,8 +333,26 @@ export default function App() {
     return m;
   }, [modGroups, dsg, sz]);
 
+  // ── Racking Calculation ──
+  const rack = useMemo(() => {
+    if (!md) return null;
+    const gCfg = {};
+    modGroups.forEach(g => {
+      gCfg[g.id] = { sc: faceScale(g.fw), sz: faceSz(g.ori, g.fw) };
+    });
+    return calcRacking(modGroups, layPos, md, pj, rackCfg, gCfg);
+  }, [modGroups, layPos, md, pj, rackCfg]);
+
+  // ── Auto-save project to localStorage ──
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try { localStorage.setItem(SAVE_KEY, JSON.stringify({ pj, ivList, modGroups, roofType, geo, wr, dsg })); } catch {}
+    }, 500);
+    return () => clearTimeout(t);
+  }, [pj, ivList, modGroups, roofType, geo, wr, dsg]);
+
   // ── Effects ──
-  useEffect(() => { if (dsg && md && iv) { sPk(mkPack(md, iv, dsg, sz, wr, pj.es, pht, ivs)); } }, [dsg, md, iv, sz, wr, pj.es, pht, ivs]);
+  useEffect(() => { if (dsg && md && iv) { sPk(mkPack(md, iv, dsg, sz, wr, pj.es, pht, ivs, rack)); } }, [dsg, md, iv, sz, wr, pj.es, pht, ivs, rack]);
   useEffect(() => { cr.current?.scrollIntoView({ behavior: "smooth" }); }, [ms]);
   useEffect(() => {
     const h = e => { if ((e.key === "Delete" || e.key === "Backspace") && laySel && tab === "layout") { e.preventDefault(); removeSelMod(); } };
@@ -436,7 +510,7 @@ RULES:
           modGroups={modGroups} addGroup={addGroup} updGroup={updGroup} delGroup={delGroup}
           climBusy={climBusy} climMsg={climMsg} lookupClimate={lookupClimate} climRan={climRan}
           invRec={invRec} setInvRec={setInvRec} recommendInverter={recommendInverter}
-          ivList={ivList} addIv={addIv} updIv={updIv} delIv={delIv} ivs={ivs} totalIvKw={totalIvKw}
+          ivList={ivList} addIv={addIv} updIv={updIv} delIv={delIv} ivs={ivs} totalIvKw={totalIvKw} pickIv={pickIv} calcOptQty={calcOptQty}
           setTab={setTab} chat={chat}
           addrQ={addrQ} addrSug={addrSug} addrOpen={addrOpen} addrLoading={addrLoading} addrRect={addrRect} addrHi={addrHi}
           addrRef={addrRef} addrInpRef={addrInpRef} searchAddr={searchAddr} pickAddr={pickAddr}
@@ -458,8 +532,10 @@ RULES:
             removeSelMod={removeSelMod} addModToFace={addModToFace}
             snapPos={snapPos} updateModPos={updateModPos}
             faceScale={faceScale} faceSz={faceSz}
-            SETBACK_FT={SETBACK_FT} LAY_W={LAY_W} GAP={GAP}
+            SETBACK_FT={SETBACK_FT} LAY_W={LAY_W}
+            gapIn={gapIn} setGapIn={setGapIn}
             strMap={strMap}
+            rack={rack} rackCfg={rackCfg} setRackCfg={setRackCfg}
           />
           <SiteElectricalTab pj={pj} sz={sz} iv={iv} dsg={dsg} dAn={dAn} sDan={sDan}
             modGroups={modGroups} layPos={layPos} md={md} ivs={ivs} />
@@ -473,7 +549,7 @@ RULES:
           ivs={ivs} totalIvKw={totalIvKw}
         />}
 
-        {tab === "photos" && <PhotosTab pht={pht} sPht={sPht} ap={ap} sAp={sAp} sz={sz} pj={pj} iv={iv} dsg={dsg} />}
+        {tab === "photos" && <PhotosTab pht={pht} sPht={sPht} ap={ap} sAp={sAp} sz={sz} pj={pj} iv={iv} dsg={dsg} dAn={dAn} />}
 
         {tab === "packlist" && <PackListTab pk={pk} dsg={dsg} md={md} iv={iv} sz={sz} pj={pj} sDsg={sDsg} mkr={mkr} />}
       </div>

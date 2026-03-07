@@ -84,10 +84,13 @@ export const pvGroupIcon = (group, positions, md, opts) => {
     );
   }
 
+  // Module pixel size must match layout canvas coordinates (positions are in scaled px)
   const lm = md.lm || 1722, wm = md.wm || 1134;
   const ori = group.ori || "L";
-  const mw = ori === "L" ? lm : wm;
-  const mh = ori === "L" ? wm : lm;
+  const fw = +group.fw || 30;
+  const sc = 840 / (fw * 12 * 25.4);  // same as faceScale(fw) with LAY_W=840
+  const mw = Math.max(6, Math.round((ori === "L" ? lm : wm) * sc));
+  const mh = Math.max(6, Math.round((ori === "L" ? wm : lm) * sc));
 
   let minX = Infinity, minY = Infinity, maxX_ = -Infinity, maxY_ = -Infinity;
   positions.forEach(p => {
