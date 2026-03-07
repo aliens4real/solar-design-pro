@@ -3,7 +3,6 @@ import { callClaude, cleanJson } from '../api/anthropic.js';
 import { ff, fs, c1, c2, bg, bd, ac, tx, td, gn, rd, bl, bt, cd, inp } from '../theme.js';
 import { COND } from '../data/nec-tables.js';
 import { SPEC_SHEETS } from '../data/spec-sheets.js';
-import { INVS } from '../data/inverters.js';
 
 const LVL = {
   1: { label: "Level 1 Installer", short: "L1", color: "#059669", bg: "#f0fdf4" },
@@ -882,54 +881,43 @@ Phases should be: 1-Site Prep, 2-Material Staging, 3-Roof Prep/Layout, 4-Racking
 
           {/* ═══════════════ APPENDIX — SPEC SHEETS ═══════════════ */}
           {specSheets.length > 0 && (
-            <>
-              {/* Appendix Index Page */}
-              <div className="plan-page" style={pg}>
-                {hdr("Appendix — Component Spec Sheets", "Reference datasheets for major system components")}
-                <table style={tbl}>
-                  <thead><tr>
-                    <th style={{ ...th, width: 30 }}>#</th>
-                    <th style={th}>Component</th>
-                    <th style={{ ...th, width: 100 }}>Category</th>
-                  </tr></thead>
-                  <tbody>
-                    {specSheets.map((s, i) => (
-                      <tr key={i}>
-                        <td style={tcR}>{String.fromCharCode(65 + i)}</td>
-                        <td style={tcell}>{s.nm}</td>
-                        <td style={tcell}>{s.cat}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div style={{ marginTop: 16, fontSize: 10, color: "#777" }}>
-                  {specSheets.length} spec sheet{specSheets.length !== 1 ? "s" : ""} included. If a PDF does not display inline, use the direct link below each frame.
-                </div>
+            <div className="plan-page" style={pg}>
+              {hdr("Appendix — Component Spec Sheets", "Reference datasheets for major system components")}
+
+              {/* Open All button (screen only, hidden in print) */}
+              <div className="no-print" style={{ marginBottom: 14 }}>
+                <button style={{ ...bt(true), fontSize: 11 }} onClick={() => specSheets.forEach(s => window.open(s.pdf, "_blank"))}>
+                  Open All Spec Sheets ({specSheets.length})
+                </button>
               </div>
 
-              {/* Individual Spec Sheet Pages */}
-              {specSheets.map((s, i) => (
-                <div key={`spec-${i}`} className="plan-page" style={{ ...pg, padding: "24px 30px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 8, borderBottom: "2px solid #000", marginBottom: 10 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#000", borderRadius: 3, padding: "2px 8px" }}>
-                      {String.fromCharCode(65 + i)}
-                    </span>
-                    <span style={{ fontSize: 14, fontWeight: 700 }}>{s.nm}</span>
-                    <span style={{ fontSize: 10, color: "#777", marginLeft: "auto" }}>{s.cat}</span>
-                  </div>
-                  <iframe
-                    src={s.pdf}
-                    title={s.nm}
-                    width="100%"
-                    height="800"
-                    style={{ border: "1px solid #ccc", borderRadius: 4, background: "#f5f5f5" }}
-                  />
-                  <div style={{ marginTop: 6, fontSize: 9, color: "#555", wordBreak: "break-all" }}>
-                    <a href={s.pdf} target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb" }}>{s.pdf}</a>
-                  </div>
-                </div>
-              ))}
-            </>
+              <table style={tbl}>
+                <thead><tr>
+                  <th style={{ ...th, width: 24 }}>#</th>
+                  <th style={th}>Component</th>
+                  <th style={{ ...th, width: 90 }}>Category</th>
+                  <th style={th}>Datasheet URL</th>
+                </tr></thead>
+                <tbody>
+                  {specSheets.map((s, i) => (
+                    <tr key={i}>
+                      <td style={{ ...tcR, fontWeight: 700 }}>{String.fromCharCode(65 + i)}</td>
+                      <td style={{ ...tcell, fontWeight: 600 }}>{s.nm}</td>
+                      <td style={tcell}>{s.cat}</td>
+                      <td style={{ ...tcell, fontSize: 9, wordBreak: "break-all" }}>
+                        <a href={s.pdf} target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb" }}>{s.pdf}</a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div style={{ marginTop: 16, fontSize: 10, color: "#555", lineHeight: 1.6 }}>
+                <strong>{specSheets.length} spec sheet{specSheets.length !== 1 ? "s" : ""}</strong> for this installation.
+                Click any URL above or scan the QR code to download the manufacturer datasheet.
+                Printed copies of spec sheets should be kept on-site during installation per AHJ requirements.
+              </div>
+            </div>
           )}
         </div>
       )}
