@@ -3,8 +3,10 @@ import { DEF_W, DEF_H, DEF_BEND } from './annotation-geo.js';
 
 // ── Helpers ──
 
-function mk(id, x, y, ct, lb, dt) {
-  return { id, x, y, ct, lb: lb || "", dt: dt || "", w: DEF_W, h: DEF_H };
+function mk(id, x, y, ct, lb, dt, zone) {
+  const m = { id, x, y, ct, lb: lb || "", dt: dt || "", w: DEF_W, h: DEF_H };
+  if (zone) m.zone = zone;
+  return m;
 }
 
 function ln(id, from, to, label, spec, dir) {
@@ -12,39 +14,45 @@ function ln(id, from, to, label, spec, dir) {
   return { id, from, to, label: label || "", dir: dir || "h", bendR: DEF_BEND, co: null, ...s };
 }
 
+function invLabel(ivs, idx) {
+  if (!ivs || ivs.length === 0) return "Inverter";
+  // Simple label — SiteElectricalTab sync effect handles qty icons
+  if (ivs.length > 1) return `Inverter ${idx + 1}`;
+  return "Inverter";
+}
+
+function invDetail(ivs, idx) {
+  if (!ivs || ivs.length === 0) return "DC→AC";
+  const e = ivs[idx] || ivs[0];
+  return e.inv?.nm || "DC→AC";
+}
+
 // ═══ Residential Roof Mount ═══
 
 export function seedResidential(es, specs, isComm, ivs) {
   const { dcPV, dcRun, acRun, seRun, gecRun } = specs;
   const markers = [
-    mk("res_rb", 340, 260, "roofbox", "Roof Box", "SolaDeck 0799"),
-    mk("res_rsd", 383, 129, "rapid_sd", "Rapid Shutdown", "NEC 690.12"),
-    mk("res_inv", 468, 416, "inverter", "Inverter", "DC→AC"),
-    mk("res_acd", 565, 416, "disconnect", "AC Disconnect", "Lockable"),
-    mk("res_mtr", 695, 415, "meter", "Utility Meter", "Revenue"),
-    mk("res_pnl", 820, 410, "panel", "Main Panel", `${es}A Service`),
-    mk("res_gec", 913, 417, "grounding", "GEC", "Ground Rod"),
-    mk("res_pm", 651, 467, "prod_meter", "Prod. Meter", ""),
+    mk("res_rsd", 400, 100, "rapid_sd", "Rapid Shutdown", "NEC 690.12"),
+    mk("res_rb", 400, 210, "roofbox", "Roof Box", "SolaDeck 0799"),
+    mk("res_mtr", 635, 400, "meter", "Utility Meter", "Revenue"),
+    mk("res_pm", 635, 450, "prod_meter", "Prod. Meter", ""),
+    mk("res_gec", 655, 530, "grounding", "GEC", "Ground Rod"),
+    mk("res_inv", 250, 630, "inverter", invLabel(ivs, 0), invDetail(ivs, 0), "basement"),
+    mk("res_acd", 350, 630, "disconnect", "AC Disconnect", "Lockable", "basement"),
+    mk("res_pnl", 460, 630, "panel", "Main Panel", `${es}A Service`, "basement"),
+    mk("res_sub", 570, 630, "panel", "Sub-Panel", "Basement", "basement"),
   ];
 
-  // Multi-inverter: add extra inverter markers
-  if (ivs && ivs.length > 1) {
-    for (let i = 1; i < ivs.length; i++) {
-      const e = ivs[i];
-      markers.push(mk(`res_inv_${i}`, 468 + i * 50, 416 + i * 35, "inverter", `Inverter ${i + 1}`, e.inv?.nm || ""));
-      markers.push(mk(`res_acd_${i}`, 565 + i * 50, 416 + i * 35, "disconnect", `AC Disc. ${i + 1}`, "Lockable"));
-    }
-  }
-
   const lines = [];
-  lines.push(ln("res_ln_rb", "res_rb", "res_rsd", "DC Roof Box", dcRun));
+  lines.push(ln("res_ln_rb", "res_rsd", "res_rb", "DC Roof Run", dcRun, "v"));
   if (dcRun) {
-    lines.push(ln("res_ln_dc", "res_rsd", "res_inv", "DC Home Run", dcRun));
+    lines.push(ln("res_ln_dc", "res_rb", "res_inv", "DC Home Run", dcRun, "v"));
   }
-  lines.push(ln("res_ln_ac", "res_inv", "res_acd", "AC Branch", acRun));
-  lines.push(ln("res_ln_af", "res_acd", "res_mtr", "AC Feeder", acRun));
-  lines.push(ln("res_ln_se", "res_mtr", "res_pnl", "Service Ent.", seRun));
-  lines.push(ln("res_ln_ge", "res_pnl", "res_gec", "Grounding", gecRun));
+  lines.push(ln("res_ln_ac", "res_inv", "res_acd", "AC Branch", acRun, "h"));
+  lines.push(ln("res_ln_af", "res_acd", "res_pnl", "AC Feeder", acRun, "h"));
+  lines.push(ln("res_ln_se", "res_pnl", "res_mtr", "Service Ent.", seRun, "v"));
+  lines.push(ln("res_ln_ge", "res_mtr", "res_gec", "Grounding", gecRun, "v"));
+  lines.push(ln("res_ln_bs", "res_pnl", "res_sub", "Sub-Panel Feed", acRun, "h"));
   return { mk: markers, ln: lines };
 }
 
@@ -56,7 +64,7 @@ export function seedCommercial(es, specs, isComm, ivs) {
     mk("com_rb", 530, 220, "roofbox", "Roof Box", "SolaDeck 0799"),
     mk("com_rsd", 458, 179, "rapid_sd", "Rapid SD", "NEC 690.12"),
     mk("com_cmb", 115, 244, "combiner", "Combiner", "Rooftop"),
-    mk("com_inv", 188, 244, "inverter", "Inverter(s)", "3-Phase"),
+    mk("com_inv", 188, 244, "inverter", invLabel(ivs, 0), invDetail(ivs, 0)),
     mk("com_acd", 265, 244, "disconnect", "AC Disc.", "Rooftop"),
     mk("com_xfr", 648, 345, "transformer", "Transformer", "Utility"),
     mk("com_mtr", 735, 351, "meter", "Utility Meter", "Revenue"),
@@ -68,7 +76,7 @@ export function seedCommercial(es, specs, isComm, ivs) {
   if (ivs && ivs.length > 1) {
     for (let i = 1; i < ivs.length; i++) {
       const e = ivs[i];
-      markers.push(mk(`com_inv_${i}`, 188 + i * 50, 244 + i * 30, "inverter", `Inverter ${i + 1}`, e.inv?.nm || ""));
+      markers.push(mk(`com_inv_${i}`, 188 + i * 50, 244 + i * 30, "inverter", invLabel(ivs, i), invDetail(ivs, i)));
     }
   }
 
@@ -89,7 +97,7 @@ export function seedGround(es, specs, isComm, ivs) {
   const { dcPV, dcRun, acRun, seRun, gecRun } = specs;
   const markers = [
     mk("gnd_cmb", 470, 293, "combiner", "Combiner Box", "At Array"),
-    mk("gnd_inv", 626, 291, "inverter", "Inverter", "Pad Mount"),
+    mk("gnd_inv", 626, 291, "inverter", invLabel(ivs, 0), invDetail(ivs, 0)),
     mk("gnd_acd", 715, 294, "disconnect", "AC Disconnect", "Lockable"),
     mk("gnd_mtr", 827, 250, "meter", "Utility Meter", ""),
     mk("gnd_pnl", 906, 250, "panel", "Main Panel", `${es}A`),
@@ -113,7 +121,7 @@ export function seedCarport(es, specs, isComm, ivs) {
   const { dcPV, dcRun, acRun, seRun, gecRun } = specs;
   const markers = [
     mk("cp_cmb", 434, 286, "combiner", "Combiner", "On Column"),
-    mk("cp_inv", 533, 289, "inverter", "Inverter", "Pad/Wall"),
+    mk("cp_inv", 533, 289, "inverter", invLabel(ivs, 0), invDetail(ivs, 0)),
     mk("cp_acd", 630, 292, "disconnect", "AC Disconnect", "Lockable"),
     mk("cp_mtr", 758, 390, "meter", "Utility Meter", ""),
     mk("cp_pnl", 843, 390, "panel", "Main Panel", `${es}A`),
