@@ -73,15 +73,32 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroup
       let newMk = (prev.mk || []).filter(m => m.ct !== "pv_array" || activeGids.has(m.gid));
       // Remove lines referencing deleted pv_array markers
       const removedIds = new Set(existing.filter(m => !activeGids.has(m.gid)).map(m => m.id));
-      let newLn = (prev.ln || []).filter(l => !removedIds.has(l.from) && !removedIds.has(l.to));
-      // Add markers for new groups
+      let newLn = (prev.ln || []).filter(l => !removedIds.has(l.from) && !removedIds.has(l.to) && !l._arrSync);
+      // Add markers + PV wire runs for new groups
+      // Find target: rapid shutdown or roof box
+      const rsdMk = newMk.find(m => m.ct === "rapid_sd");
+      const rbMk = newMk.find(m => m.ct === "roofbox");
+      const pvTarget = rsdMk || rbMk;
+      const pvSpec = dcPV ? { wire: dcPV.wires?.[0]?.g, wireType: dcPV.wires?.[0]?.t, qty: dcPV.wires?.[0]?.n, conduit: dcPV.conduit } : {};
       activeGroups.forEach((g, i) => {
+        const arrId = "arr_" + g.id;
         if (!existingGids.has(g.id)) {
           newMk.push({
-            id: "arr_" + g.id, x: basePos.x + i * spacing, y: basePos.y,
+            id: arrId, x: basePos.x + i * spacing, y: basePos.y,
             ct: "pv_array", lb: g.nm || "Array " + (i + 1), dt: "",
             gid: g.id, w: 36, h: 36,
           });
+        }
+        // Auto-generate PV wire run from array to rapid shutdown / roof box
+        if (pvTarget) {
+          const lnId = "ln_pv_" + g.id;
+          if (!newLn.some(l => l.id === lnId)) {
+            newLn.push({
+              id: lnId, from: arrId, to: pvTarget.id,
+              label: "PV Source", dir: "h", bendR: 12, co: null,
+              _arrSync: true, ...pvSpec,
+            });
+          }
         }
       });
       return { ...prev, mk: newMk, ln: newLn };
