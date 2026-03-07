@@ -106,6 +106,8 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroup
   }, [modGroups, mt, sDan]);
 
   // ── Sync inverter markers: one icon per inverter unit ──
+  // Creates full NEC-compliant wiring for each inverter:
+  //   Roof Box → DC Home Run → Inverter → AC Branch → AC Disconnect → AC Feeder → Main Panel
   const ivSyncRef = useRef(null);
   useEffect(() => {
     if (!ivs || ivs.length === 0) return;
@@ -126,6 +128,25 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroup
       const acLn = newLn.find(l => l.from === primInv.id && !l._ivSync &&
         newMk.some(m => m.id === l.to && m.ct === "disconnect"));
       const primAcd = acLn ? newMk.find(m => m.id === acLn.to) : null;
+
+      // Find roof box (DC home run source) and main panel (AC feeder target)
+      const roofBox = newMk.find(m => m.ct === "roofbox");
+      const mainPnl = newMk.find(m => m.ct === "panel" && !m._ivSync);
+
+      // Find existing DC Home Run line (roof box → primary inverter) for spec
+      const dcHomeLn = newLn.find(l =>
+        (l.from === roofBox?.id && l.to === primInv.id) ||
+        (l.to === roofBox?.id && l.from === primInv.id));
+      const dcSp = dcHomeLn ? { wire: dcHomeLn.wire, wireType: dcHomeLn.wireType, qty: dcHomeLn.qty, conduit: dcHomeLn.conduit } : {};
+
+      // Find existing AC Feeder line (primary ACD → panel) for spec
+      const afLn = primAcd && mainPnl ? newLn.find(l =>
+        (l.from === primAcd.id && l.to === mainPnl.id) ||
+        (l.to === primAcd.id && l.from === mainPnl.id)) : null;
+      const afSp = afLn ? { wire: afLn.wire, wireType: afLn.wireType, qty: afLn.qty, conduit: afLn.conduit } : {};
+
+      // Copy wire spec from existing AC Branch line
+      const acSp = acLn ? { wire: acLn.wire, wireType: acLn.wireType, qty: acLn.qty, conduit: acLn.conduit } : {};
 
       // Collect extra inverter IDs (seed extras + old synced)
       const extraInvIds = new Set(
@@ -164,32 +185,55 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroup
         if (ai >= 0) newMk[ai] = { ...newMk[ai], lb: totalQty > 1 ? "AC Disc. 1" : "AC Disconnect" };
       }
 
-      // Copy wire spec from existing AC line
-      const sp = acLn ? { wire: acLn.wire, wireType: acLn.wireType, qty: acLn.qty, conduit: acLn.conduit } : {};
-
-      // Add synced inverter + disconnect + line for units 2..n
-      const gap = 40;
+      // Add synced inverter + disconnect + full wiring for units 2..n
+      const gap = 50;
       for (let i = 1; i < totalQty; i++) {
         const f = flat[i] || flat[0];
         const invId = `iv_s_${i}`, acdId = `ad_s_${i}`;
+        const invZone = primInv.zone;
 
+        // Inverter marker
         newMk.push({
           id: invId, x: primInv.x, y: primInv.y + i * gap,
           ct: "inverter", lb: `Inverter ${i + 1}`, dt: f.inv?.nm || "",
           w: primInv.w || 36, h: primInv.h || 36, _ivSync: true,
+          ...(invZone ? { zone: invZone } : {}),
         });
 
+        // DC Home Run: Roof Box → Inverter (NEC 690.31 — each inverter needs its own DC circuit)
+        if (roofBox) {
+          newLn.push({
+            id: `ln_s_dc_${i}`, from: roofBox.id, to: invId,
+            label: "DC Home Run", dir: "v", bendR: 12, co: null,
+            _ivSync: true, ...dcSp,
+          });
+        }
+
+        // AC Disconnect marker + AC Branch line
         if (primAcd) {
+          const acdZone = primAcd.zone;
           newMk.push({
             id: acdId, x: primAcd.x, y: primAcd.y + i * gap,
             ct: "disconnect", lb: `AC Disc. ${i + 1}`, dt: "Lockable",
             w: primAcd.w || 36, h: primAcd.h || 36, _ivSync: true,
+            ...(acdZone ? { zone: acdZone } : {}),
           });
+
+          // AC Branch: Inverter → AC Disconnect (NEC 690.15)
           newLn.push({
             id: `ln_s_ac_${i}`, from: invId, to: acdId,
             label: "AC Branch", dir: "h", bendR: 12, co: null,
-            _ivSync: true, ...sp,
+            _ivSync: true, ...acSp,
           });
+
+          // AC Feeder: AC Disconnect → Main Panel (NEC 705.12 — each source needs OCPD at panel)
+          if (mainPnl) {
+            newLn.push({
+              id: `ln_s_af_${i}`, from: acdId, to: mainPnl.id,
+              label: "AC Feeder", dir: "h", bendR: 12, co: null,
+              _ivSync: true, ...afSp,
+            });
+          }
         }
       }
 
