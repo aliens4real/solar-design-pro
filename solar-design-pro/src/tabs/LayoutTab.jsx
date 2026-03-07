@@ -20,19 +20,34 @@ const compass = a => {
   return "N" + Math.round(360 - n) + "\u00b0W";
 };
 
-// ── Fractional inch formatter ──
+// ── Fractional inch → ft-in (total in) formatter ──
 function fracIn(dec) {
+  // Build fractional inches string
   const whole = Math.floor(dec);
   const rem = dec - whole;
-  if (rem < 1/32) return `${whole}`;
-  // Snap to nearest 1/16
   const sixteenths = Math.round(rem * 16);
-  if (sixteenths === 0) return `${whole}`;
-  if (sixteenths === 16) return `${whole + 1}`;
-  // Simplify fraction
-  let n = sixteenths, d = 16;
-  while (n % 2 === 0) { n /= 2; d /= 2; }
-  return whole > 0 ? `${whole}-${n}/${d}` : `${n}/${d}`;
+  let totalIn;
+  if (sixteenths === 0 || sixteenths < 1) totalIn = `${whole}`;
+  else if (sixteenths === 16) totalIn = `${whole + 1}`;
+  else {
+    let n = sixteenths, d = 16;
+    while (n % 2 === 0) { n /= 2; d /= 2; }
+    totalIn = whole > 0 ? `${whole}-${n}/${d}` : `${n}/${d}`;
+  }
+  // Build ft-in string
+  const roundedIn = sixteenths === 16 ? whole + 1 : whole;
+  const ft = Math.floor(roundedIn / 12);
+  const inPart = roundedIn % 12;
+  let fracPart = "";
+  if (sixteenths > 0 && sixteenths < 16) {
+    let n = sixteenths, d = 16;
+    while (n % 2 === 0) { n /= 2; d /= 2; }
+    fracPart = `-${n}/${d}`;
+  }
+  if (ft > 0) {
+    return `${ft}'-${inPart}${fracPart}" (${totalIn}")`;
+  }
+  return `${totalIn}"`;
 }
 
 // ── Architectural dimension annotation helpers ──
@@ -699,25 +714,25 @@ export default function LayoutTab({
 
                           // Row 0 (innermost, closest to array): individual segment chain
                           const chainY = topY;
-                          elems.push(hDim(r0.modRects[0].x, r0.cols[0].x, chainY, `${fracIn(r0.ovIn)}"`, true, ff));
+                          elems.push(hDim(r0.modRects[0].x, r0.cols[0].x, chainY, `${fracIn(r0.ovIn)}`, true, ff));
                           for (let i = 0; i < r0.cols.length - 1; i++) {
-                            elems.push(hDim(r0.cols[i].x, r0.cols[i + 1].x, chainY, `${fracIn(r0.spIn)}"`, true, ff));
+                            elems.push(hDim(r0.cols[i].x, r0.cols[i + 1].x, chainY, `${fracIn(r0.spIn)}`, true, ff));
                           }
                           const lastMod = r0.modRects[r0.modRects.length - 1];
-                          elems.push(hDim(r0.cols[r0.cols.length - 1].x, lastMod.x + lastMod.w, chainY, `${fracIn(r0.ovIn)}"`, true, ff));
+                          elems.push(hDim(r0.cols[r0.cols.length - 1].x, lastMod.x + lastMod.w, chainY, `${fracIn(r0.ovIn)}`, true, ff));
 
                           // Rows 1..N: cumulative from left edge to each foot (nested outward)
                           let cumRow = 1;
                           r0.cols.forEach((col, i) => {
                             if (i > 0) {
                               const dist = fm.pxIn(col.x - fm.arrayLeftX);
-                              elems.push(hDim(fm.arrayLeftX, col.x, chainY - step * cumRow, `X: ${fracIn(dist)}"`, true, ff));
+                              elems.push(hDim(fm.arrayLeftX, col.x, chainY - step * cumRow, `X: ${fracIn(dist)}`, true, ff));
                               cumRow++;
                             }
                           });
 
                           // Outermost: total array width
-                          elems.push(hDim(fm.arrayLeftX, fm.arrayRightX, chainY - step * cumRow, `${fracIn(fm.totalWidthIn)}"`, true, ff));
+                          elems.push(hDim(fm.arrayLeftX, fm.arrayRightX, chainY - step * cumRow, `${fracIn(fm.totalWidthIn)}`, true, ff));
 
                           return elems;
                         })()}
@@ -731,21 +746,21 @@ export default function LayoutTab({
 
                           // Innermost (closest to array): local per-row dims for first row
                           const dimX0 = leftX;
-                          elems.push(vDim(r0.y0, r0.ry1, dimX0, `${fracIn(r0.topIn)}"`, true, ff));
-                          elems.push(vDim(r0.ry1, r0.ry2, dimX0 - step, `${fracIn(r0.railGapIn)}"`, true, ff));
-                          elems.push(vDim(r0.ry2, r0.y0 + r0.modRects[0].h, dimX0, `${fracIn(r0.botIn)}"`, true, ff));
+                          elems.push(vDim(r0.y0, r0.ry1, dimX0, `${fracIn(r0.topIn)}`, true, ff));
+                          elems.push(vDim(r0.ry1, r0.ry2, dimX0 - step, `${fracIn(r0.railGapIn)}`, true, ff));
+                          elems.push(vDim(r0.ry2, r0.y0 + r0.modRects[0].h, dimX0, `${fracIn(r0.botIn)}`, true, ff));
 
                           // Cumulative Y dims: from array top to each row's rail positions
                           let cumCol = 2; // start after local dims columns
                           fm.rows.forEach((row, ri) => {
                             const xOff = leftX - step * (cumCol + 1);
-                            elems.push(vDim(topY, row.ry1, xOff, `Y: ${fracIn(row.cumRy1)}"`, true, ff));
-                            elems.push(vDim(topY, row.ry2, xOff - step, `Y: ${fracIn(row.cumRy2)}"`, true, ff));
+                            elems.push(vDim(topY, row.ry1, xOff, `Y: ${fracIn(row.cumRy1)}`, true, ff));
+                            elems.push(vDim(topY, row.ry2, xOff - step, `Y: ${fracIn(row.cumRy2)}`, true, ff));
                             cumCol += 2;
                           });
 
                           // Outermost: total array height
-                          elems.push(vDim(fm.arrayTopY, fm.arrayBotY, leftX - step * (cumCol + 1), `${fracIn(fm.totalHeightIn)}"`, true, ff));
+                          elems.push(vDim(fm.arrayTopY, fm.arrayBotY, leftX - step * (cumCol + 1), `${fracIn(fm.totalHeightIn)}`, true, ff));
 
                           return elems;
                         })()}
@@ -753,7 +768,7 @@ export default function LayoutTab({
                       </svg>
 
                       <div style={{ fontFamily: ff, fontSize: 9, color: td, marginTop: 4 }}>
-                        Origin: upper-left corner | Overhang: {fracIn(r0?.ovIn)}" | Spacing: {fracIn(r0?.spIn)}" | Rail gap: {fracIn(r0?.railGapIn)}" | Total: {fracIn(fm.totalWidthIn)}" x {fracIn(fm.totalHeightIn)}"
+                        Origin: upper-left corner | Overhang: {fracIn(r0?.ovIn)} | Spacing: {fracIn(r0?.spIn)} | Rail gap: {fracIn(r0?.railGapIn)} | Total: {fracIn(fm.totalWidthIn)} x {fracIn(fm.totalHeightIn)}
                       </div>
                     </div>
                   );
