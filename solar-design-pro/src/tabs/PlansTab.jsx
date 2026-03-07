@@ -1,8 +1,23 @@
-import { useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
+import { callClaude, cleanJson } from '../api/anthropic.js';
 import { ff, fs, c1, c2, bg, bd, ac, tx, td, gn, rd, bl, bt, cd, inp } from '../theme.js';
 import { COND } from '../data/nec-tables.js';
+import { SPEC_SHEETS } from '../data/spec-sheets.js';
+import { INVS } from '../data/inverters.js';
 
-export default function PlansTab({ md, iv, sz, pj, dsg, totalMods, totalKw, modGroups, logo, setLogo, logoRef, printRef, modSz, faceSz, layPos, ivs, totalIvKw }) {
+const LVL = {
+  1: { label: "Level 1 Installer", short: "L1", color: "#059669", bg: "#f0fdf4" },
+  2: { label: "Level 2 Installer", short: "L2", color: "#2563eb", bg: "#eff6ff" },
+  3: { label: "Level 3 Electrician", short: "L3", color: "#d97706", bg: "#fffbeb" },
+  4: { label: "Foreman", short: "FM", color: "#dc2626", bg: "#fef2f2" },
+};
+
+export default function PlansTab({ md, iv, sz, pj, dsg, pk, totalMods, totalKw, modGroups, logo, setLogo, logoRef, printRef, modSz, faceSz, layPos, ivs, totalIvKw, rack }) {
+
+  const [manual, setManual] = useState(null);
+  const [manBusy, setManBusy] = useState(false);
+  const [manErr, setManErr] = useState("");
+  const manualRef = useRef(null);
 
   /* ═══ COMPUTED VALUES ═══ */
   const ready = md && iv && sz;
@@ -19,6 +34,47 @@ export default function PlansTab({ md, iv, sz, pj, dsg, totalMods, totalKw, modG
   const pass120 = acBreaker + (busbar <= rule120);
   const sysVoc = sz ? (sz.vc * modsPerStr).toFixed(1) : "\u2014";
   const sysVmp = sz ? (sz.vh * modsPerStr).toFixed(1) : "\u2014";
+
+  /* ═══ SPEC SHEET APPENDIX COLLECTION ═══ */
+  const specSheets = useMemo(() => {
+    const sheets = [];
+    const seen = new Set();
+    const add = (nm, cat, pdf) => {
+      if (!pdf || seen.has(pdf)) return;
+      seen.add(pdf);
+      sheets.push({ nm, cat, pdf });
+    };
+    // Module spec sheet
+    if (md?.pdf) add(md.nm, "Module", md.pdf);
+    // Inverter spec sheets (unique across multi-inverter list)
+    if (ivs?.length > 0) {
+      ivs.forEach(e => { if (e.inv?.pdf) add(e.inv.nm, "Inverter", e.inv.pdf); });
+    } else if (iv?.pdf) {
+      add(iv.nm, "Inverter", iv.pdf);
+    }
+    // Racking rail
+    const railKey = rack?.railFamily;
+    if (railKey && SPEC_SHEETS[railKey]) {
+      const s = SPEC_SHEETS[railKey];
+      add(s.nm, s.cat, s.pdf);
+    }
+    // FlashFoot2 (roof mount only)
+    if (pj.mt !== "ground" && SPEC_SHEETS.ff2) {
+      const s = SPEC_SHEETS.ff2;
+      add(s.nm, s.cat, s.pdf);
+    }
+    // UFO clamp (always)
+    if (SPEC_SHEETS.ufo) {
+      const s = SPEC_SHEETS.ufo;
+      add(s.nm, s.cat, s.pdf);
+    }
+    // SolaDeck roof box (roof mount only)
+    if (pj.mt !== "ground" && SPEC_SHEETS.soladeck) {
+      const s = SPEC_SHEETS.soladeck;
+      add(s.nm, s.cat, s.pdf);
+    }
+    return sheets;
+  }, [md, iv, ivs, rack, pj.mt]);
 
   /* ═══ PAGE STYLES ═══ */
   const pg = { background: "#fff", color: "#000", padding: "36px 44px", borderRadius: 8, marginBottom: 16, fontFamily: ff, fontSize: 13, lineHeight: 1.7, border: "1px solid #ccc", minHeight: 500, position: "relative", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" };
@@ -73,6 +129,60 @@ export default function PlansTab({ md, iv, sz, pj, dsg, totalMods, totalKw, modG
     return wire;
   };
 
+  /* ═══ INSTALLATION MANUAL ═══ */
+  const generateManual = async () => {
+    setManBusy(true); setManErr("");
+    const pkSummary = pk?.length > 0 ? pk.map(it => `${it.q}x ${it.d} (${it.c})`).join(", ") : "No pack list";
+    const system = `You are a NABCEP-certified solar installation foreman creating a detailed installation manual.
+Return ONLY valid JSON (no markdown fences, no commentary).
+
+PROJECT: ${pj.nm || "Solar Installation"} | ${[pj.ad, pj.ct, pj.st, pj.zp].filter(Boolean).join(", ")}
+MOUNT: ${pj.mt || "roof"} (${pj.rf || "asphalt"}) | Service: ${pj.es || 200}A
+MODULE: ${md?.nm || "?"} ${md?.w || 0}W x ${nMods} = ${arrayKw.toFixed(1)}kW
+INVERTER: ${iv?.nm || "?"} ${iv?.kw || 0}kW x ${nInv} (${iv?.tp || "string"})
+STRINGS: ${nStr} strings x ${modsPerStr} modules | DC:AC ${dcac}
+MODULE GROUPS: ${modGroups.map(g => `${g.nm}: ${g.cnt || 0} mods @ ${g.az}° ${g.ori === "L" ? "landscape" : "portrait"}`).join("; ")}
+PACK LIST: ${pkSummary}
+
+Generate a chronological installation manual with exactly 10 phases. Each task is assigned a skill level 1-4:
+Level 1: Entry installer — layout, material staging, simple assembly
+Level 2: Experienced installer — racking, module placement, torquing
+Level 3: Licensed electrician — wiring, conduit, connections, grounding
+Level 4: Foreman — inspections, coordination, final checks, commissioning
+
+JSON schema: { "phases": [{ "name": "Phase Name", "tasks": [{ "step": 1, "task": "Task description", "level": 1-4, "duration": "Xmin", "details": "Detailed instructions", "safety": "Safety note or empty string" }] }], "safety": ["General safety rule 1", ...], "tools": ["Tool 1", ...] }
+
+Phases should be: 1-Site Prep, 2-Material Staging, 3-Roof Prep/Layout, 4-Racking Installation, 5-Module Placement, 6-DC Wiring, 7-Inverter/Equipment, 8-AC Wiring, 9-Grounding, 10-Cleanup/Inspection Prep`;
+    try {
+      const txt = await callClaude({ system, messages: [{ role: "user", content: "Generate the installation manual JSON now." }], max_tokens: 8000 });
+      const json = cleanJson(txt);
+      const data = JSON.parse(json);
+      if (!data.phases || !Array.isArray(data.phases)) throw new Error("Invalid manual format");
+      setManual(data);
+    } catch (e) {
+      setManErr(e.message || "Failed to generate manual");
+    }
+    setManBusy(false);
+  };
+
+  const doPrintManual = () => {
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document.write(`<!DOCTYPE html><html><head><title>${pj.nm || "Solar"} — Installation Manual</title><style>
+      @media print { @page { size: letter; margin: 0.5in; } body { margin: 0; } .plan-page { page-break-after: always; break-after: page; } .plan-page:last-child { page-break-after: auto; break-after: auto; } }
+      body { font-family: ${ff}; margin: 0; padding: 0; }
+      .plan-page { padding: 36px 44px; font-size: 13px; line-height: 1.7; }
+      table { border-collapse: collapse; width: 100%; font-size: 12px; }
+      th { padding: 7px 10px; background: #e8e8e8; border: 1px solid #bbb; font-weight: 700; text-align: left; font-size: 11px; }
+      td { padding: 6px 10px; border: 1px solid #ccc; }
+    </style></head><body>`);
+    const pages = manualRef.current?.querySelectorAll(".plan-page");
+    if (pages) pages.forEach(p => w.document.write(p.outerHTML));
+    w.document.write("</body></html>");
+    w.document.close();
+    setTimeout(() => { w.print(); }, 500);
+  };
+
   /* ═══ RENDER ═══ */
   return (
     <div style={{ maxWidth: 920, margin: "0 auto" }} className="fi">
@@ -85,6 +195,10 @@ export default function PlansTab({ md, iv, sz, pj, dsg, totalMods, totalKw, modG
           const r = new FileReader(); r.onload = ev => setLogo(ev.target.result); r.readAsDataURL(f);
         }} />
         <button style={{ ...bt(false), fontSize: 11 }} onClick={() => logoRef.current?.click()}>Upload Logo</button>
+        <button style={{ ...bt(false), fontSize: 11 }} onClick={generateManual} disabled={!ready || manBusy}>
+          {manBusy ? "Generating..." : "Generate Install Manual"}
+        </button>
+        {manual && <button style={{ ...bt(false), fontSize: 11 }} onClick={doPrintManual}>Print Manual</button>}
         <button style={{ ...bt(true), fontSize: 11 }} onClick={doPrint}>Print / Save PDF</button>
       </div>
 
@@ -627,6 +741,196 @@ export default function PlansTab({ md, iv, sz, pj, dsg, totalMods, totalKw, modG
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* ═══ MANUAL LOADING STATE ═══ */}
+      {manBusy && (
+        <div style={{ ...cd, textAlign: "center", padding: 40, marginTop: 14 }}>
+          <div style={{ fontSize: 28, marginBottom: 10, animation: "pulse 1.5s infinite" }}>&#9881;</div>
+          <div style={{ fontFamily: ff, fontSize: 13, color: tx }}>Generating installation manual...</div>
+          <div style={{ fontFamily: ff, fontSize: 11, color: td, marginTop: 4 }}>This may take 10-15 seconds</div>
+          <style>{`@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+        </div>
+      )}
+
+      {/* ═══ MANUAL ERROR ═══ */}
+      {manErr && (
+        <div style={{ ...cd, marginTop: 14, border: "2px solid #dc2626", padding: "16px 20px" }}>
+          <div style={{ fontFamily: ff, fontSize: 13, color: "#dc2626", fontWeight: 700 }}>Manual Generation Failed</div>
+          <div style={{ fontFamily: ff, fontSize: 11, color: tx, marginTop: 4 }}>{manErr}</div>
+          <button style={{ ...bt(false), fontSize: 11, marginTop: 8 }} onClick={() => setManErr("")}>Dismiss</button>
+        </div>
+      )}
+
+      {/* ═══ INSTALLATION MANUAL PAGES ═══ */}
+      {manual && (
+        <div ref={manualRef} style={{ marginTop: 14 }}>
+
+          {/* ──── MANUAL COVER PAGE ──── */}
+          <div className="plan-page" style={pg}>
+            {hdr("Installation Manual", "Chronological Task Guide — By Skill Level")}
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 14 }}>PROJECT SUMMARY</div>
+            <table style={tbl}><tbody>
+              <tr><td style={th}>Project</td><td style={tcell}>{pj.nm || "—"}</td><td style={th}>System</td><td style={tcR}>{arrayKw.toFixed(1)} kW</td></tr>
+              <tr><td style={th}>Address</td><td style={tcell} colSpan={3}>{[pj.ad, pj.ct, pj.st, pj.zp].filter(Boolean).join(", ") || "—"}</td></tr>
+              <tr><td style={th}>Modules</td><td style={tcell}>{nMods}x {md?.nm}</td><td style={th}>Inverter</td><td style={tcell}>{nInv}x {iv?.nm}</td></tr>
+              <tr><td style={th}>Mount</td><td style={tcell}>{pj.mt}</td><td style={th}>Strings</td><td style={tcR}>{nStr}S x {modsPerStr}M</td></tr>
+            </tbody></table>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 18 }}>SKILL LEVEL LEGEND</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+              {Object.entries(LVL).map(([k, v]) => (
+                <div key={k} style={{ padding: "6px 14px", borderRadius: 6, background: v.bg, border: `1px solid ${v.color}`, fontFamily: ff, fontSize: 11 }}>
+                  <span style={{ fontWeight: 700, color: v.color }}>{v.short}</span> — {v.label}
+                </div>
+              ))}
+            </div>
+
+            {manual.safety?.length > 0 && <>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 14 }}>GENERAL SAFETY</div>
+              <div style={{ fontSize: 11, color: "#333", lineHeight: 1.7, padding: "8px 12px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 4 }}>
+                {manual.safety.map((s, i) => <div key={i}>{"\u26a0"} {s}</div>)}
+              </div>
+            </>}
+
+            {manual.tools?.length > 0 && <>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 14 }}>REQUIRED TOOLS</div>
+              <div style={{ fontSize: 11, color: "#333", lineHeight: 1.7, padding: "8px 12px", background: "#f9f9f9", border: "1px solid #ddd", borderRadius: 4, columns: 2 }}>
+                {manual.tools.map((t, i) => <div key={i}>{"\u2022"} {t}</div>)}
+              </div>
+            </>}
+          </div>
+
+          {/* ──── MASTER TIMELINE PAGE ──── */}
+          <div className="plan-page" style={pg}>
+            {hdr("Master Timeline", "All Phases — Chronological Order")}
+            {manual.phases.map((phase, pi) => (
+              <div key={pi} style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 4, background: "#f3f4f6", padding: "4px 8px", borderRadius: 3 }}>
+                  Phase {pi + 1}: {phase.name}
+                </div>
+                <table style={tbl}>
+                  <thead><tr>
+                    <th style={{ ...th, width: 30 }}>#</th><th style={th}>Task</th><th style={{ ...th, width: 40 }}>Level</th>
+                    <th style={{ ...th, width: 50 }}>Time</th><th style={th}>Details</th><th style={{ ...th, width: 120 }}>Safety</th>
+                  </tr></thead>
+                  <tbody>{phase.tasks.map((t, ti) => {
+                    const lv = LVL[t.level] || LVL[1];
+                    return (
+                      <tr key={ti}>
+                        <td style={tcR}>{t.step || ti + 1}</td>
+                        <td style={{ ...tcell, fontWeight: 600 }}>{t.task}</td>
+                        <td style={{ ...tcell, textAlign: "center" }}>
+                          <span style={{ display: "inline-block", padding: "1px 6px", borderRadius: 3, background: lv.bg, color: lv.color, fontWeight: 700, fontSize: 9 }}>{lv.short}</span>
+                        </td>
+                        <td style={{ ...tcR, fontSize: 10 }}>{t.duration}</td>
+                        <td style={{ ...tcell, fontSize: 10 }}>{t.details}</td>
+                        <td style={{ ...tcell, fontSize: 10, color: t.safety ? "#dc2626" : "#999" }}>{t.safety || "—"}</td>
+                      </tr>
+                    );
+                  })}</tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+
+          {/* ──── ROLE-SPECIFIC PAGES ──── */}
+          {Object.entries(LVL).map(([lvlKey, lvl]) => {
+            const lvlNum = +lvlKey;
+            const roleTasks = manual.phases.map(phase => ({
+              name: phase.name,
+              tasks: phase.tasks.filter(t => t.level === lvlNum)
+            })).filter(p => p.tasks.length > 0);
+            if (roleTasks.length === 0) return null;
+            const totalMin = roleTasks.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + (parseInt(t.duration) || 0), 0), 0);
+            return (
+              <div key={lvlKey} className="plan-page" style={pg}>
+                {hdr(`${lvl.label} Tasks`, `Role-Specific Task Sheet — ${lvl.short}`)}
+                <div style={{ display: "flex", gap: 14, marginBottom: 12 }}>
+                  <div style={{ padding: "4px 12px", borderRadius: 4, background: lvl.bg, border: `1px solid ${lvl.color}`, fontFamily: ff, fontSize: 11, fontWeight: 700, color: lvl.color }}>
+                    {roleTasks.reduce((s, p) => s + p.tasks.length, 0)} tasks
+                  </div>
+                  <div style={{ fontFamily: ff, fontSize: 11, color: "#555", paddingTop: 5 }}>
+                    Estimated time: {totalMin >= 60 ? `${Math.floor(totalMin / 60)}h ${totalMin % 60}m` : `${totalMin}m`}
+                  </div>
+                </div>
+                {roleTasks.map((phase, pi) => (
+                  <div key={pi} style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: lvl.color, marginBottom: 4 }}>{phase.name}</div>
+                    <table style={tbl}>
+                      <thead><tr>
+                        <th style={{ ...th, width: 24 }}>{"\u2610"}</th><th style={th}>Task</th>
+                        <th style={{ ...th, width: 50 }}>Time</th><th style={th}>Details</th><th style={{ ...th, width: 110 }}>Safety</th>
+                      </tr></thead>
+                      <tbody>{phase.tasks.map((t, ti) => (
+                        <tr key={ti}>
+                          <td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td>
+                          <td style={{ ...tcell, fontWeight: 600 }}>{t.task}</td>
+                          <td style={{ ...tcR, fontSize: 10 }}>{t.duration}</td>
+                          <td style={{ ...tcell, fontSize: 10 }}>{t.details}</td>
+                          <td style={{ ...tcell, fontSize: 10, color: t.safety ? "#dc2626" : "#999" }}>{t.safety || "—"}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+
+          {/* ═══════════════ APPENDIX — SPEC SHEETS ═══════════════ */}
+          {specSheets.length > 0 && (
+            <>
+              {/* Appendix Index Page */}
+              <div className="plan-page" style={pg}>
+                {hdr("Appendix — Component Spec Sheets", "Reference datasheets for major system components")}
+                <table style={tbl}>
+                  <thead><tr>
+                    <th style={{ ...th, width: 30 }}>#</th>
+                    <th style={th}>Component</th>
+                    <th style={{ ...th, width: 100 }}>Category</th>
+                  </tr></thead>
+                  <tbody>
+                    {specSheets.map((s, i) => (
+                      <tr key={i}>
+                        <td style={tcR}>{String.fromCharCode(65 + i)}</td>
+                        <td style={tcell}>{s.nm}</td>
+                        <td style={tcell}>{s.cat}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ marginTop: 16, fontSize: 10, color: "#777" }}>
+                  {specSheets.length} spec sheet{specSheets.length !== 1 ? "s" : ""} included. If a PDF does not display inline, use the direct link below each frame.
+                </div>
+              </div>
+
+              {/* Individual Spec Sheet Pages */}
+              {specSheets.map((s, i) => (
+                <div key={`spec-${i}`} className="plan-page" style={{ ...pg, padding: "24px 30px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 8, borderBottom: "2px solid #000", marginBottom: 10 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#000", borderRadius: 3, padding: "2px 8px" }}>
+                      {String.fromCharCode(65 + i)}
+                    </span>
+                    <span style={{ fontSize: 14, fontWeight: 700 }}>{s.nm}</span>
+                    <span style={{ fontSize: 10, color: "#777", marginLeft: "auto" }}>{s.cat}</span>
+                  </div>
+                  <iframe
+                    src={s.pdf}
+                    title={s.nm}
+                    width="100%"
+                    height="800"
+                    style={{ border: "1px solid #ccc", borderRadius: 4, background: "#f5f5f5" }}
+                  />
+                  <div style={{ marginTop: 6, fontSize: 9, color: "#555", wordBreak: "break-all" }}>
+                    <a href={s.pdf} target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb" }}>{s.pdf}</a>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>

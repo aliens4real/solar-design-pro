@@ -542,11 +542,11 @@ RULES:
         </>}
 
         {tab === "plans" && <PlansTab
-          md={md} iv={iv} sz={sz} pj={pj} dsg={dsg}
+          md={md} iv={iv} sz={sz} pj={pj} dsg={dsg} pk={pk}
           totalMods={totalMods} totalKw={totalKw} modGroups={modGroups}
           logo={logo} setLogo={setLogo} logoRef={logoRef} printRef={printRef}
           modSz={modSz} faceSz={faceSz} layPos={layPos}
-          ivs={ivs} totalIvKw={totalIvKw}
+          ivs={ivs} totalIvKw={totalIvKw} rack={rack}
         />}
 
         {tab === "photos" && <PhotosTab pht={pht} sPht={sPht} ap={ap} sAp={sAp} sz={sz} pj={pj} iv={iv} dsg={dsg} dAn={dAn} />}

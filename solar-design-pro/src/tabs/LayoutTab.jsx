@@ -286,15 +286,38 @@ export default function LayoutTab({
                 if (rex > svgMaxX) svgMaxX = rex;
               });
 
+              // Cumulative corner-referenced dimensions
+              const arrayTopY = svgMinY;
+              const arrayBotY = svgMaxY;
+              const arrayLeftX = svgMinX;
+              const arrayRightX = svgMaxX;
+              const totalWidthIn = pxIn(arrayRightX - arrayLeftX);
+              const totalHeightIn = pxIn(arrayBotY - arrayTopY);
+
+              // Per-row cumulative Y from array top edge
+              rowData.forEach(row => {
+                row.cumRy1 = pxIn(row.ry1 - arrayTopY);
+                row.cumRy2 = pxIn(row.ry2 - arrayTopY);
+              });
+
               const pad = 30;
+              const padR = 50; // extra right padding for right-side dims
+              const padB = 24; // extra bottom padding for cumulative horiz dims
               return {
                 rows: rowData,
                 feet: allFeet,
+                pxIn,
+                totalWidthIn,
+                totalHeightIn,
+                arrayTopY,
+                arrayBotY,
+                arrayLeftX,
+                arrayRightX,
                 vb: {
                   x: svgMinX - pad,
                   y: svgMinY - pad,
-                  w: (svgMaxX - svgMinX) + pad * 2,
-                  h: (svgMaxY - svgMinY) + pad * 2
+                  w: (svgMaxX - svgMinX) + pad + padR,
+                  h: (svgMaxY - svgMinY) + pad + padB
                 }
               };
             })();
@@ -675,10 +698,57 @@ export default function LayoutTab({
                             </g>
                           );
                         })()}
+
+                        {/* Right-side vertical dimensions — corner-referenced cumulative */}
+                        {fm.rows.length > 0 && (() => {
+                          // Find the rightmost module edge across ALL rows
+                          let maxRight = 0;
+                          fm.rows.forEach(row => {
+                            row.modRects.forEach(r => {
+                              if (r.x + r.w > maxRight) maxRight = r.x + r.w;
+                            });
+                          });
+                          const dimX = maxRight + 6;
+                          const topY = fm.arrayTopY;
+                          const elems = [];
+
+                          // Cumulative Y dims: from array top to each row's foot positions
+                          // Stagger columns by row to avoid overlap
+                          fm.rows.forEach((row, ri) => {
+                            const xOff = dimX + ri * 28;
+                            // Top rail
+                            elems.push(vDim(topY, row.ry1, xOff, `Y: ${row.cumRy1}"`, false, ff));
+                            // Bottom rail
+                            elems.push(vDim(topY, row.ry2, xOff + 14, `Y: ${row.cumRy2}"`, false, ff));
+                          });
+
+                          // Overall array height (outermost right)
+                          const outerX = dimX + fm.rows.length * 28;
+                          elems.push(vDim(fm.arrayTopY, fm.arrayBotY, outerX, `${fm.totalHeightIn}"`, false, ff));
+                          return elems;
+                        })()}
+
+                        {/* Cumulative horizontal dimensions below the span chain */}
+                        {r0 && r0.cols.length >= 2 && (() => {
+                          const lastRow = fm.rows[fm.rows.length - 1];
+                          const lastModBot = (lastRow.modRects[0]?.y || 0) + (lastRow.modRects[0]?.h || 0);
+                          const cumY = lastModBot + 20;
+                          const elems = [];
+                          // Overall width
+                          elems.push(hDim(fm.arrayLeftX, fm.arrayRightX, cumY, `${fm.totalWidthIn}"`, false, ff));
+                          // Cumulative from left corner to each intermediate foot
+                          r0.cols.forEach((col, i) => {
+                            if (i > 0 && i < r0.cols.length - 1) {
+                              const dist = fm.pxIn(col.x - fm.arrayLeftX);
+                              elems.push(hDim(fm.arrayLeftX, col.x, cumY + 14, `${dist}"`, false, ff));
+                            }
+                          });
+                          return elems;
+                        })()}
                       </svg>
 
                       <div style={{ fontFamily: ff, fontSize: 9, color: td, marginTop: 4 }}>
-                        Overhang: {r0?.ovIn}" | Spacing: {r0?.spIn}" | Rail gap: {r0?.railGapIn}"
+                        Origin: upper-left corner | Overhang: {r0?.ovIn}" | Spacing: {r0?.spIn}" | Rail gap: {r0?.railGapIn}" | Total: {fm.totalWidthIn}" x {fm.totalHeightIn}"
                       </div>
                     </div>
                   );
