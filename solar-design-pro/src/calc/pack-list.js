@@ -14,8 +14,8 @@ const COND_ACC = {
   '2"':     { stick: 26.00, coupling: 1.30, connector: 1.40, locknut: 0.40, bushing: 0.65, strap: 0.55, lb: 10.00 },
 };
 
-// Emit conduit accessory line items for a conduit run
-// endpoints: number of enclosure entries (default 2; AC runs through disconnect = 4)
+// Emit conduit accessory line items for a conduit run  (formula key rendered in PackListTab.jsx)
+// endpoints: number of enclosure entries (default 2; AC branch = 4)
 function addConduitRun(a, szRaw, runLen, label, endpoints) {
   const sz = SZ_ASCII[szRaw] || szRaw.replace(/[""\u201d]/g, '"');
   const p = COND_ACC[sz] || COND_ACC['3/4"'];

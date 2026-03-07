@@ -126,48 +126,13 @@ export default function PackListTab({ pk, dsg, md, iv, sz, pj, sDsg, mkr }) {
             </tr></tfoot>
           </table></div>
 
-        {/* ═══ CONDUIT SIZING REFERENCE ═══ */}
+        {/* ── Conduit formula key (compact) ── */}
         {pk.some(it => it.c === "Conduit") && (
-          <details style={{ ...cd, marginTop: 14 }}>
-            <summary style={{ fontFamily: ff, fontSize: 13, fontWeight: 700, color: ac, cursor: "pointer", userSelect: "none" }}>
-              Conduit Accessories — How Quantities Are Calculated
-            </summary>
-            <div style={{ marginTop: 10, fontFamily: ff, fontSize: 11, color: tx, lineHeight: 1.8 }}>
-              <p style={{ margin: "0 0 6px", color: td, fontSize: 10 }}>
-                Per conduit run, the BOM emits 7 line items. Formulas use <b>run length</b> (ft) from the Site Electrical Layout wire runs and <b>endpoints</b> (number of enclosure entries on the run).
-              </p>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                <thead><tr style={{ background: c2 }}>
-                  {["Accessory", "Formula", "NEC Ref", "Notes"].map(h =>
-                    <th key={h} style={{ padding: "6px 10px", textAlign: "left", color: ac, fontSize: 10, borderBottom: `1px solid ${bd}`, fontWeight: 600 }}>{h}</th>)}
-                </tr></thead>
-                <tbody>
-                  {[
-                    ["EMT 10ft Sticks", "ceil(length / 10)", "—", "Standard 10ft trade size sticks"],
-                    ["Set Screw Couplings", "sticks − 1", "—", "One coupling joins each pair of sticks"],
-                    ["Set Screw Connectors", "endpoints", "NEC 358.42", "One per enclosure entry; AC branch = 4 (inverter + disconnect in/out + panel), others = 2"],
-                    ["Locknuts", "endpoints", "NEC 358.42", "One per connector, secures connector to enclosure knockout"],
-                    ["Insulating Bushings", "endpoints", "NEC 300.4(G)", "One per connector, protects wire insulation at termination"],
-                    ["One-Hole Straps", "ceil(length / 10) + 1", "NEC 358.30", "Within 3ft of each box + every 10ft of run"],
-                    ["LB Fittings", "max(1, ceil(length / 25))", "NEC 358.26", "At least 1 per run for direction change; additional every 25ft"],
-                  ].map(([acc, formula, nec, note], i) => (
-                    <tr key={i} style={{ borderBottom: `1px solid ${bd}08` }}>
-                      <td style={{ padding: "5px 10px", fontWeight: 600 }}>{acc}</td>
-                      <td style={{ padding: "5px 10px", fontFamily: "monospace", fontSize: 10, color: ac }}>{formula}</td>
-                      <td style={{ padding: "5px 10px", color: td, fontSize: 10 }}>{nec}</td>
-                      <td style={{ padding: "5px 10px", color: td, fontSize: 10 }}>{note}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p style={{ margin: "8px 0 2px", color: td, fontSize: 10 }}>
-                <b>Endpoints by run type:</b> DC Home Run = 2 (roof box → inverter) · AC Branch = 4 (inverter → disconnect in/out → panel) · Service Entrance = 2 (meter → panel)
-              </p>
-              <p style={{ margin: "2px 0 0", color: td, fontSize: 10 }}>
-                Conduit size is auto-calculated per NEC 40% fill rule based on wire count and gauge. All quantities include the labeled run segment only — adjust manually for site-specific routing.
-              </p>
-            </div>
-          </details>
+          <div style={{ fontFamily: ff, fontSize: 9, color: td, lineHeight: 1.7, padding: "6px 12px", background: c2, borderRadius: "0 0 8px 8px", marginTop: -1 }}>
+            <b style={{ color: ac }}>Conduit qty formulas</b> (per run, from Site Electrical wire lengths):
+            {" "}Sticks = <code>ceil(len/10)</code> · Couplings = <code>sticks−1</code> · Connectors & Locknuts & Bushings = <code>endpoints</code> · Straps = <code>ceil(len/10)+1</code> <span style={{ fontSize: 8 }}>(358.30)</span> · LBs = <code>max(1,ceil(len/25))</code> <span style={{ fontSize: 8 }}>(358.26)</span>
+            {" "}| Endpoints: DC=2 · AC=4 · SE=2 | Size via NEC 40% fill
+          </div>
         )}
 
         {/* ═══ VAN LOADING LIST ═══ */}
