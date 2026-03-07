@@ -50,11 +50,12 @@ export default function PhotosTab({ pht, sPht, ap, sAp, sz, pj, iv, dsg, dAn }) 
 
   const containerSize = imgRef.current ? { w: imgRef.current.clientWidth, h: imgRef.current.clientHeight } : { w: 800, h: 520 };
 
-  const overlay = ph ? AnnotationOverlay({
-    mk: ph.mk || [], ln: ph.ln || [], updAn, getSvgPt,
+  // Always call AnnotationOverlay to keep hook count stable (it uses useState internally)
+  const overlay = AnnotationOverlay({
+    mk: ph?.mk || [], ln: ph?.ln || [], updAn, getSvgPt,
     containerRef: imgRef, containerSize,
     siteSpecs, SITE_RUNS, renderMode: "absolute",
-  }) : null;
+  });
 
   const updPh = useCallback(fn => sPht(p => p.map(x => x.id === ap ? fn(x) : x)), [sPht, ap]);
 
