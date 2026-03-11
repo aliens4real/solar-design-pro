@@ -331,12 +331,13 @@ export default function LayoutTab({
               });
 
               // Left: local dims (2 cols) + cumulative Y per row (2 cols each) + total height (1 col) + labels
+              const DIM_STEP = 20;
               const nVCols = 2 + Math.max(1, rowData.length) * 2 + 1;
-              const padL = nVCols * 14 + 16;
+              const padL = nVCols * DIM_STEP + 16;
               const padR = 12; // minimal right padding
               // Top: segment chain + cumulative X per foot + total width + labels
               const nFootCols = rowData[0]?.cols?.length || 2;
-              const padT = (nFootCols + 1) * 14 + 10;
+              const padT = (nFootCols + 1) * DIM_STEP + 10;
               const padB = 12; // minimal bottom padding
               return {
                 rows: rowData,
@@ -697,29 +698,42 @@ export default function LayoutTab({
                           </g>
                         ))}
 
-                        {/* Vertical dashed lines at each foot column X — from dim area to array bottom */}
-                        {r0 && r0.cols.map((col, i) => (
-                          <line key={`gvx${i}`} x1={col.x} y1={fm.vb.y} x2={col.x} y2={fm.arrayBotY}
-                            stroke="#ccc" strokeWidth={0.3} strokeDasharray="3 2" />
-                        ))}
-                        {/* Horizontal dashed lines at each rail Y — from dim area to array right */}
-                        {fm.rows.map((row, ri) => (
-                          <g key={`ghy${ri}`}>
-                            <line x1={fm.vb.x} y1={row.ry1} x2={fm.arrayRightX} y2={row.ry1}
-                              stroke="#ccc" strokeWidth={0.3} strokeDasharray="3 2" />
-                            <line x1={fm.vb.x} y1={row.ry2} x2={fm.arrayRightX} y2={row.ry2}
-                              stroke="#ccc" strokeWidth={0.3} strokeDasharray="3 2" />
-                          </g>
-                        ))}
-                        {/* Vertical dashed lines at module left/right edges — for overhang dims */}
+                        {/* Extension lines from each foot/edge to its corresponding dimension */}
                         {r0 && (() => {
-                          const lx = r0.modRects[0]?.x;
-                          const rx = r0.modRects[r0.modRects.length - 1];
+                          const step = 20;
+                          const chainY = fm.arrayTopY;
+                          const leftX = fm.arrayLeftX;
+                          const gc = "#7ab4e8";
+                          const gs = { stroke: gc, strokeWidth: 0.4, strokeDasharray: "4 2" };
+                          const nCols = r0.cols.length;
+                          // Total width dim level (outermost horizontal)
+                          const totalWidthLevel = chainY - step * nCols - EXT;
                           return <>
-                            {lx != null && <line x1={lx} y1={fm.vb.y} x2={lx} y2={fm.arrayBotY}
-                              stroke="#ddd" strokeWidth={0.25} strokeDasharray="2 3" />}
-                            {rx && <line x1={rx.x + rx.w} y1={fm.vb.y} x2={rx.x + rx.w} y2={fm.arrayBotY}
-                              stroke="#ddd" strokeWidth={0.25} strokeDasharray="2 3" />}
+                            {/* Vertical at each foot column X — to its outermost cumulative dim */}
+                            {r0.cols.map((col, i) => {
+                              // col 0: only in chain dim; col i>0: cumulative dim at step*i
+                              const topStop = i === 0 ? chainY - EXT : chainY - step * i - EXT;
+                              return <line key={`gvx${i}`} x1={col.x} y1={topStop} x2={col.x} y2={fm.arrayBotY} {...gs} />;
+                            })}
+                            {/* Vertical at module left/right edges — to total width dim */}
+                            {r0.modRects[0] && <line x1={r0.modRects[0].x} y1={totalWidthLevel} x2={r0.modRects[0].x} y2={fm.arrayBotY}
+                              {...gs} strokeWidth={0.3} />}
+                            {(() => { const lr = r0.modRects[r0.modRects.length - 1]; return lr &&
+                              <line x1={lr.x + lr.w} y1={totalWidthLevel} x2={lr.x + lr.w} y2={fm.arrayBotY}
+                                {...gs} strokeWidth={0.3} />;
+                            })()}
+                            {/* Horizontal at each rail Y — to its outermost cumulative dim */}
+                            {fm.rows.map((row, ri) => {
+                              // cumCol offset: 2 (local dims) + ri*2
+                              const ry1X = leftX - step * (3 + ri * 2) - EXT;
+                              const ry2X = leftX - step * (4 + ri * 2) - EXT;
+                              return (
+                                <g key={`ghy${ri}`}>
+                                  <line x1={ry1X} y1={row.ry1} x2={fm.arrayRightX} y2={row.ry1} {...gs} />
+                                  <line x1={ry2X} y1={row.ry2} x2={fm.arrayRightX} y2={row.ry2} {...gs} />
+                                </g>
+                              );
+                            })}
                           </>;
                         })()}
 
@@ -735,7 +749,7 @@ export default function LayoutTab({
                         {/* ── Nested horizontal dimensions ABOVE array ── */}
                         {r0 && r0.cols.length >= 2 && (() => {
                           const topY = fm.arrayTopY;
-                          const step = 14;
+                          const step = 20;
                           const elems = [];
 
                           // Row 0 (innermost, closest to array): individual segment chain
@@ -767,7 +781,7 @@ export default function LayoutTab({
                         {fm.rows.length > 0 && (() => {
                           const leftX = fm.arrayLeftX;
                           const topY = fm.arrayTopY;
-                          const step = 14;
+                          const step = 20;
                           const elems = [];
 
                           // Innermost (closest to array): local per-row dims for first row
