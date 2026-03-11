@@ -679,11 +679,11 @@ export default function LayoutTab({
 
                       <svg id={svgId} viewBox={`${fm.vb.x} ${fm.vb.y} ${fm.vb.w} ${fm.vb.h}`}
                         style={{ width: "100%", maxHeight: 400, background: "#fff", borderRadius: 4, border: `1px solid ${bd}` }}>
-                        {/* Ghost module outlines */}
+                        {/* Module outlines */}
                         {fm.rows.map((row, ri) =>
                           row.modRects.map((r, mi) => (
                             <rect key={`gm${ri}-${mi}`} x={r.x} y={r.y} width={r.w} height={r.h}
-                              fill="none" stroke="#ccc" strokeWidth={0.5} strokeDasharray="4 2" />
+                              fill="#e8f0fe" stroke="#90b4e0" strokeWidth={0.8} rx={1} />
                           ))
                         )}
 
@@ -696,6 +696,32 @@ export default function LayoutTab({
                               stroke="#bbb" strokeWidth={0.3} />
                           </g>
                         ))}
+
+                        {/* Vertical dashed lines at each foot column X — from dim area to array bottom */}
+                        {r0 && r0.cols.map((col, i) => (
+                          <line key={`gvx${i}`} x1={col.x} y1={fm.vb.y} x2={col.x} y2={fm.arrayBotY}
+                            stroke="#ccc" strokeWidth={0.3} strokeDasharray="3 2" />
+                        ))}
+                        {/* Horizontal dashed lines at each rail Y — from dim area to array right */}
+                        {fm.rows.map((row, ri) => (
+                          <g key={`ghy${ri}`}>
+                            <line x1={fm.vb.x} y1={row.ry1} x2={fm.arrayRightX} y2={row.ry1}
+                              stroke="#ccc" strokeWidth={0.3} strokeDasharray="3 2" />
+                            <line x1={fm.vb.x} y1={row.ry2} x2={fm.arrayRightX} y2={row.ry2}
+                              stroke="#ccc" strokeWidth={0.3} strokeDasharray="3 2" />
+                          </g>
+                        ))}
+                        {/* Vertical dashed lines at module left/right edges — for overhang dims */}
+                        {r0 && (() => {
+                          const lx = r0.modRects[0]?.x;
+                          const rx = r0.modRects[r0.modRects.length - 1];
+                          return <>
+                            {lx != null && <line x1={lx} y1={fm.vb.y} x2={lx} y2={fm.arrayBotY}
+                              stroke="#ddd" strokeWidth={0.25} strokeDasharray="2 3" />}
+                            {rx && <line x1={rx.x + rx.w} y1={fm.vb.y} x2={rx.x + rx.w} y2={fm.arrayBotY}
+                              stroke="#ddd" strokeWidth={0.25} strokeDasharray="2 3" />}
+                          </>;
+                        })()}
 
                         {/* Foot centers with crosshairs */}
                         {fm.feet.map((f, i) => (
