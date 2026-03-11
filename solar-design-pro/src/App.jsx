@@ -35,15 +35,70 @@ import SiteElectricalTab from './tabs/SiteElectricalTab.jsx';
 import PlansTab from './tabs/PlansTab.jsx';
 import PhotosTab from './tabs/PhotosTab.jsx';
 import PackListTab from './tabs/PackListTab.jsx';
+import PricingTab from './tabs/PricingTab.jsx';
 
 // ── LocalStorage helpers ──
 const SAVE_KEY = "sdp_project";
+const JOBS_KEY = "sdp_jobs";
+const ACTIVE_KEY = "sdp_active_job";
+const jobKey = (id) => `sdp_job_${id}`;
+
+const DEF_PJ = { nm: "", ad: "", ct: "", st: "", zp: "", kw: "", mt: "roof", rf: "asphalt", rp: "", es: "200", ds: "", eq: "", nt: "", tl: "", th: "", ir: "", ps: "", mi: "", ii: "" };
+const DEF_GROUPS = [{ id: 1, nm: "South Face", az: "180", ori: "L", cnt: "", rp: "", fw: "30", fd: "18" }];
+const DEF_WR = { pv: 0, dc: 0, ac: 0, se: 0, gec: 0 };
+const DEF_PHT = [
+  { id: 1, src: null, nm: "Exterior Wall", ds: "", mk: [], ln: [], zn: "exterior" },
+  { id: 2, src: null, nm: "Basement", ds: "", mk: [], ln: [], zn: "basement" },
+];
+
+function getJobIndex() {
+  try { const s = localStorage.getItem(JOBS_KEY); return s ? JSON.parse(s) : []; } catch { return []; }
+}
+
+// Migrate legacy single-project to multi-job system
+(function migrateIfNeeded() {
+  try {
+    if (localStorage.getItem(JOBS_KEY)) return;
+    const legacy = localStorage.getItem(SAVE_KEY);
+    if (!legacy) return;
+    const data = JSON.parse(legacy);
+    const id = Date.now().toString();
+    const entry = { id, name: data.pj?.nm || "Migrated Job", address: [data.pj?.ad, data.pj?.ct, data.pj?.st].filter(Boolean).join(", "), kw: data.pj?.kw || "", mt: data.pj?.mt || "roof", updatedAt: new Date().toISOString() };
+    localStorage.setItem(JOBS_KEY, JSON.stringify([entry]));
+    localStorage.setItem(jobKey(id), legacy);
+    localStorage.setItem(ACTIVE_KEY, id);
+  } catch {}
+})();
+
 function loadSaved() {
-  try { const s = localStorage.getItem(SAVE_KEY); return s ? JSON.parse(s) : null; } catch { return null; }
+  try {
+    const idx = getJobIndex();
+    if (idx.length > 0) {
+      const activeId = localStorage.getItem(ACTIVE_KEY);
+      const id = activeId && idx.find(j => j.id === activeId) ? activeId : idx[0].id;
+      const data = localStorage.getItem(jobKey(id));
+      if (data) return JSON.parse(data);
+    }
+    const s = localStorage.getItem(SAVE_KEY);
+    return s ? JSON.parse(s) : null;
+  } catch { return null; }
+}
+
+function loadActiveId() {
+  try {
+    const idx = getJobIndex();
+    if (idx.length > 0) {
+      const activeId = localStorage.getItem(ACTIVE_KEY);
+      return (activeId && idx.find(j => j.id === activeId)) ? activeId : idx[0].id;
+    }
+    return null;
+  } catch { return null; }
 }
 
 export default function App() {
   const saved = useRef(loadSaved());
+  const [jobs, setJobs] = useState(() => getJobIndex());
+  const [activeJobId, setActiveJobId] = useState(() => loadActiveId());
 
   // ── Core State ──
   const [tab, setTab] = useState("project");
@@ -305,6 +360,68 @@ export default function App() {
     setLaySel(null);
   };
 
+  // ── Job Manager ──
+  useEffect(() => {
+    if (activeJobId) return;
+    const id = Date.now().toString();
+    const entry = { id, name: "New Job", address: "", kw: "", mt: "roof", updatedAt: new Date().toISOString() };
+    localStorage.setItem(JOBS_KEY, JSON.stringify([entry]));
+    localStorage.setItem(jobKey(id), JSON.stringify({ pj, ivList, modGroups, roofType, geo, wr, dsg }));
+    localStorage.setItem(ACTIVE_KEY, id);
+    setActiveJobId(id);
+    setJobs([entry]);
+  }, []);
+
+  const loadJob = useCallback((id) => {
+    try {
+      const raw = localStorage.getItem(jobKey(id));
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      sPj(data.pj || { ...DEF_PJ });
+      setGeo(data.geo || null);
+      sIvList(data.ivList || []);
+      setModGroups(data.modGroups || [{ ...DEF_GROUPS[0], id: Date.now() }]);
+      setRoofType(data.roofType || "gable");
+      sWr(data.wr || { ...DEF_WR });
+      sDsg(data.dsg || null);
+      sPk([]); sDan({ mk: [], ln: [] }); sMs([]); sMkr([]);
+      sPht(DEF_PHT.map(p => ({ ...p, mk: [], ln: [] })));
+      setLayPos({}); setLaySel(null); setInvRec("");
+      setActiveJobId(id);
+      localStorage.setItem(ACTIVE_KEY, id);
+      climRan.current = false;
+    } catch {}
+  }, []);
+
+  const newJob = useCallback(() => {
+    const id = Date.now().toString();
+    const entry = { id, name: "New Job", address: "", kw: "", mt: "roof", updatedAt: new Date().toISOString() };
+    const idx = getJobIndex();
+    idx.unshift(entry);
+    localStorage.setItem(JOBS_KEY, JSON.stringify(idx));
+    localStorage.setItem(jobKey(id), JSON.stringify({ pj: DEF_PJ, ivList: [], modGroups: DEF_GROUPS, roofType: "gable", geo: null, wr: DEF_WR, dsg: null }));
+    localStorage.setItem(ACTIVE_KEY, id);
+    sPj({ ...DEF_PJ }); setGeo(null); sIvList([]);
+    setModGroups([{ ...DEF_GROUPS[0], id: Date.now() }]);
+    setRoofType("gable"); sWr({ ...DEF_WR }); sDsg(null);
+    sPk([]); sDan({ mk: [], ln: [] }); sMs([]); sMkr([]);
+    sPht(DEF_PHT.map(p => ({ ...p, mk: [], ln: [] })));
+    setLayPos({}); setLaySel(null); setInvRec("");
+    setActiveJobId(id); setJobs(idx);
+    climRan.current = false;
+  }, []);
+
+  const deleteJob = useCallback((id) => {
+    const idx = getJobIndex().filter(j => j.id !== id);
+    localStorage.removeItem(jobKey(id));
+    localStorage.setItem(JOBS_KEY, JSON.stringify(idx));
+    setJobs(idx);
+    if (activeJobId === id) {
+      if (idx.length > 0) loadJob(idx[0].id);
+      else newJob();
+    }
+  }, [activeJobId, loadJob, newJob]);
+
   // ── String sizing ──
   const cr = useRef(null);
   const sz = strCalc(md, iv, pj.tl, pj.th, pj.mt);
@@ -340,10 +457,23 @@ export default function App() {
   // ── Auto-save project to localStorage ──
   useEffect(() => {
     const t = setTimeout(() => {
-      try { localStorage.setItem(SAVE_KEY, JSON.stringify({ pj, ivList, modGroups, roofType, geo, wr, dsg })); } catch {}
+      try {
+        const data = JSON.stringify({ pj, ivList, modGroups, roofType, geo, wr, dsg });
+        localStorage.setItem(SAVE_KEY, data);
+        if (activeJobId) {
+          localStorage.setItem(jobKey(activeJobId), data);
+          const idx = getJobIndex();
+          const i = idx.findIndex(j => j.id === activeJobId);
+          if (i >= 0) {
+            idx[i] = { ...idx[i], name: pj.nm || "Untitled Job", address: [pj.ad, pj.ct, pj.st].filter(Boolean).join(", "), kw: pj.kw || "", mt: pj.mt || "roof", updatedAt: new Date().toISOString() };
+            localStorage.setItem(JOBS_KEY, JSON.stringify(idx));
+            setJobs(idx);
+          }
+        }
+      } catch {}
     }, 500);
     return () => clearTimeout(t);
-  }, [pj, ivList, modGroups, roofType, geo, wr, dsg]);
+  }, [pj, ivList, modGroups, roofType, geo, wr, dsg, activeJobId]);
 
   // ── Effects ──
   useEffect(() => { if (dsg && md && iv) { sPk(mkPack(md, iv, dsg, sz, wr, pj.es, pht, ivs, rack)); } }, [dsg, md, iv, sz, wr, pj.es, pht, ivs, rack]);
@@ -509,6 +639,7 @@ RULES:
           addrQ={addrQ} addrSug={addrSug} addrOpen={addrOpen} addrLoading={addrLoading} addrRect={addrRect} addrHi={addrHi}
           addrRef={addrRef} addrInpRef={addrInpRef} searchAddr={searchAddr} pickAddr={pickAddr}
           setAddrOpen={setAddrOpen} updateRect={updateRect} addrKey={addrKey}
+          jobs={jobs} activeJobId={activeJobId} onNewJob={newJob} onLoadJob={loadJob} onDeleteJob={deleteJob}
         />}
 
         {tab === "ai" && <AiDesignTab ms={ms} ci={ci} sCi={sCi} cb={cb} chat={chat} cr={cr} />}
@@ -546,6 +677,8 @@ RULES:
         {tab === "photos" && <PhotosTab pht={pht} sPht={sPht} ap={ap} sAp={sAp} sz={sz} pj={pj} iv={iv} dsg={dsg} dAn={dAn} />}
 
         {tab === "packlist" && <PackListTab pk={pk} dsg={dsg} md={md} iv={iv} sz={sz} pj={pj} sDsg={sDsg} mkr={mkr} />}
+
+        {tab === "pricing" && <PricingTab pk={pk} dsg={dsg} pj={pj} totalMods={totalMods} totalKw={totalKw} md={md} iv={iv} ivs={ivs} logo={logo} />}
       </div>
     </div>
   );

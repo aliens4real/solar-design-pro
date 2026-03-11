@@ -14,10 +14,54 @@ export default function ProjectTab({
   climBusy, climMsg, lookupClimate, climRan, invRec, setInvRec, recommendInverter,
   ivList, addIv, updIv, delIv, ivs, totalIvKw, pickIv, calcOptQty,
   setTab, chat, addrQ, addrSug, addrOpen, addrLoading, addrRect, addrHi, addrRef, addrInpRef,
-  searchAddr, pickAddr, setAddrOpen, updateRect, addrKey
+  searchAddr, pickAddr, setAddrOpen, updateRect, addrKey,
+  jobs, activeJobId, onNewJob, onLoadJob, onDeleteJob
 }) {
   return (
     <div style={{ maxWidth: 920, margin: "0 auto" }} className="fi">
+
+      {/* ═══ SAVED JOBS ═══ */}
+      <div style={{ ...cd, marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: ac, fontFamily: ff, textTransform: "uppercase", letterSpacing: "0.08em" }}>Saved Jobs</div>
+          <button style={{ ...bt(true), fontSize: 10, padding: "4px 10px" }} onClick={onNewJob}>+ New Job</button>
+        </div>
+        {jobs && jobs.length > 0 && (
+          <div style={{ maxHeight: 200, overflow: "auto", borderRadius: 6, border: `1px solid ${bd}` }}>
+            {jobs.map(j => (
+              <div key={j.id} style={{
+                display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
+                background: j.id === activeJobId ? c2 : "transparent",
+                borderBottom: `1px solid ${bd}`,
+                borderLeft: j.id === activeJobId ? `3px solid ${ac}` : "3px solid transparent",
+                cursor: j.id === activeJobId ? "default" : "pointer",
+              }}
+                onClick={() => j.id !== activeJobId && onLoadJob(j.id)}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: j.id === activeJobId ? 700 : 400, color: j.id === activeJobId ? ac : tx, fontFamily: ff, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {j.name || "Untitled"}
+                  </div>
+                  <div style={{ fontSize: 10, color: td, fontFamily: ff }}>
+                    {j.kw ? j.kw + " kW" : ""}
+                    {j.kw && j.mt ? " \u00b7 " : ""}
+                    {j.mt || ""}
+                    {j.updatedAt ? " \u00b7 " + new Date(j.updatedAt).toLocaleDateString() : ""}
+                  </div>
+                </div>
+                {j.id !== activeJobId && (
+                  <button style={{ ...bt(false), fontSize: 9, padding: "3px 8px" }} onClick={e => { e.stopPropagation(); onLoadJob(j.id); }}>Load</button>
+                )}
+                {j.id === activeJobId && (
+                  <span style={{ fontSize: 9, fontFamily: ff, color: gn, fontWeight: 700 }}>ACTIVE</span>
+                )}
+                <button style={{ background: "none", border: "none", color: rd, cursor: "pointer", fontSize: 14, fontWeight: 700, padding: "0 4px" }}
+                  onClick={e => { e.stopPropagation(); if (confirm("Delete this job?")) onDeleteJob(j.id); }}>&times;</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* ═══ PROPERTY ═══ */}
       <div style={{ ...cd, marginBottom: 14 }}>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ff, c1, c2, bd, ac, tx, td, gn, rd, bt, cd } from '../theme.js';
 import { MCATS } from '../data/markers.js';
+import { SEED_ITEMS } from '../data/inventory-seed.js';
 
 // ── Inventory matching ──
 function normalize(s) { return s.replace(/\s*\([^)]*\)\s*$/g, "").trim().toLowerCase(); }
@@ -40,7 +41,7 @@ export default function PackListTab({ pk, dsg, md, iv, sz, pj, sDsg, mkr }) {
           }
         }
       } catch {}
-      setInvItems([]);
+      setInvItems(SEED_ITEMS);
     };
     load();
     const onStorage = (e) => { if (e.key === "solar-inventory") load(); };
@@ -49,11 +50,27 @@ export default function PackListTab({ pk, dsg, md, iv, sz, pj, sDsg, mkr }) {
   }, []);
 
   // Compute matches for BOM items
-  const matches = pk.map(it => matchInv(it.c, it.d, invItems));
+  const matches = useMemo(() => pk.map(it => matchInv(it.c, it.d, invItems)), [pk, invItems]);
   const stockedCount = pk.filter((it, i) => {
     const m = matches[i];
     return m && m.qty >= it.q;
   }).length;
+
+  // Sort pack list by inventory location
+  const sorted = useMemo(() => {
+    const items = pk.map((it, i) => {
+      const m = matches[i];
+      const loc = m?.notes?.split("|")[1]?.trim() || "";
+      return { it, m, loc };
+    });
+    if (!invItems.length) return items;
+    return [...items].sort((a, b) => {
+      if (!a.loc && b.loc) return 1;
+      if (a.loc && !b.loc) return -1;
+      if (!a.loc && !b.loc) return 0;
+      return a.loc.localeCompare(b.loc, undefined, { numeric: true });
+    });
+  }, [pk, matches, invItems]);
 
   // Shopping list: group matched items by warehouse location
   const [checked, setChecked] = useState({});
@@ -98,13 +115,19 @@ export default function PackListTab({ pk, dsg, md, iv, sz, pj, sDsg, mkr }) {
         </div>}
         <div style={{ ...cd, padding: 0, overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: ff, fontSize: 11 }}>
-            <thead><tr style={{ background: c2 }}>{["Cat", "Description", "Qty", "Unit", "$/Unit", "Total", ...(invItems.length > 0 ? ["On Hand", "Need"] : [])].map(h =>
+            <thead><tr style={{ background: c2 }}>{["Cat", "Description", "Qty", "Unit", "$/Unit", "Total", ...(invItems.length > 0 ? ["Location", "On Hand", "Need"] : [])].map(h =>
               <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: ac, fontSize: 10, borderBottom: `1px solid ${bd}`, fontWeight: 600 }}>{h}</th>)}</tr></thead>
-            <tbody>{pk.map((it, i) => {
-              const m = matches[i];
+            <tbody>{sorted.flatMap(({ it, m, loc }, i) => {
+              const prevLoc = i > 0 ? sorted[i - 1].loc : null;
+              const showHeader = invItems.length > 0 && loc && loc !== prevLoc;
+              const colCount = 6 + (invItems.length > 0 ? 3 : 0);
               const onHand = m ? m.qty : null;
               const need = m ? Math.max(0, it.q - m.qty) : null;
-              return (
+              const rows = [];
+              if (showHeader) rows.push(
+                <tr key={`loc-${i}`}><td colSpan={colCount} style={{ padding: "6px 12px", fontWeight: 700, color: ac, fontSize: 10, background: c2, borderBottom: `1px solid ${bd}`, fontFamily: ff, letterSpacing: "0.04em" }}>{loc}</td></tr>
+              );
+              rows.push(
                 <tr key={i} style={{ borderBottom: `1px solid ${bd}08` }}>
                   <td style={{ padding: "6px 12px", color: td, fontSize: 10 }}>{it.c}</td>
                   <td style={{ padding: "6px 12px" }}>{it.d}</td>
@@ -113,16 +136,18 @@ export default function PackListTab({ pk, dsg, md, iv, sz, pj, sDsg, mkr }) {
                   <td style={{ padding: "6px 12px", textAlign: "right" }}>${it.$.toFixed(2)}</td>
                   <td style={{ padding: "6px 12px", textAlign: "right", color: ac, fontWeight: 600 }}>${it.t.toFixed(2)}</td>
                   {invItems.length > 0 && <>
+                    <td style={{ padding: "6px 12px", fontSize: 10, color: loc ? tx : td }}>{loc || "—"}</td>
                     <td style={{ padding: "6px 12px", textAlign: "right", color: onHand != null ? tx : td }}>{onHand != null ? onHand : "—"}</td>
                     <td style={{ padding: "6px 12px", textAlign: "right", fontWeight: 600, color: need === 0 ? gn : need != null ? rd : td }}>{need != null ? need : "—"}</td>
                   </>}
                 </tr>
               );
+              return rows;
             })}</tbody>
             <tfoot><tr style={{ background: c2, fontWeight: 700 }}>
               <td colSpan={5} style={{ padding: "10px 12px", textAlign: "right", color: ac }}>TOTAL MATERIAL COST</td>
               <td style={{ padding: "10px 12px", textAlign: "right", color: ac, fontSize: 14 }}>${pk.reduce((s, i) => s + i.t, 0).toFixed(2)}</td>
-              {invItems.length > 0 && <td colSpan={2} />}
+              {invItems.length > 0 && <td colSpan={3} />}
             </tr></tfoot>
           </table></div>
 
