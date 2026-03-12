@@ -1,6 +1,7 @@
 import { useRef, useCallback, useMemo, useEffect, useState } from 'react';
 import { ff, c1, c2, bd, ac, tx, td, cd, bt } from '../theme.js';
 import { egcSize, gecSize, seSize } from '../calc/nec-sizing.js';
+import { WIRE_AREA } from '../data/nec-tables.js';
 import { calcConduit } from '../diagrams/shared.jsx';
 import ResidentialRoofDiagram, { BASEMENT_Y, EXTERIOR_ZONE } from '../diagrams/ResidentialRoofDiagram.jsx';
 import CommercialRoofDiagram from '../diagrams/CommercialRoofDiagram.jsx';
@@ -8,8 +9,11 @@ import GroundMountDiagram from '../diagrams/GroundMountDiagram.jsx';
 import CarportDiagram from '../diagrams/CarportDiagram.jsx';
 import AnnotationOverlay from '../components/AnnotationOverlay.jsx';
 import { seedResidential, seedCommercial, seedGround, seedCarport } from '../calc/diagram-seeds.js';
+import PhotosTab from './PhotosTab.jsx';
 
-export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroups, layPos, md, ivs }) {
+export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroups, layPos, md, ivs, pht, sPht, ap, sAp }) {
+  const [phOpen, setPhOpen] = useState(true);
+  const [notesOpen, setNotesOpen] = useState(true);
   const mt = pj.mt || "roof";
   const es = +(pj.es || 200);
   const isComm = es >= 320;
@@ -380,12 +384,146 @@ export default function SiteElectricalTab({ pj, sz, iv, dsg, dAn, sDan, modGroup
 
       {overlay && overlay.editPanels}
 
+      {/* ═══ WIRE SIZING NOTES ═══ */}
+      <div style={{ ...cd, marginTop: 10, background: c2 }}>
+        <div onClick={() => setNotesOpen(p => !p)}
+          style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}>
+          <span style={{ fontFamily: ff, fontSize: 11, color: ac, fontWeight: 700 }}>
+            {notesOpen ? "\u25bc" : "\u25b6"} Wire Sizing Calculations
+          </span>
+          <span style={{ fontFamily: ff, fontSize: 9, color: td }}>NEC 2023 basis</span>
+        </div>
+        {notesOpen && (() => {
+          const ocpd = sz?.oc || 20;
+          const fmtArea = (wires) => {
+            const items = wires.map(w => `${w.n}×${(WIRE_AREA[w.g] || 0.02).toFixed(4)}`);
+            const total = wires.reduce((s, w) => s + (WIRE_AREA[w.g] || 0.02) * w.n, 0);
+            return `${items.join(" + ")} = ${total.toFixed(4)} sq in`;
+          };
+          const hd = { fontFamily: ff, fontSize: 9, color: ac, fontWeight: 700, padding: "4px 6px", textAlign: "left", borderBottom: `1px solid ${bd}`, whiteSpace: "nowrap" };
+          const cl = { fontFamily: ff, fontSize: 9, color: tx, padding: "3px 6px", borderBottom: `1px solid ${bd}`, verticalAlign: "top" };
+          const clN = { ...cl, color: td, lineHeight: 1.5 };
+          const rows = [
+            {
+              label: "PV Source",
+              spec: dcPV,
+              notes: [
+                `2 conductors: DC +/− per string`,
+                `#10 AWG USE-2 PV Wire — rated for wet/sunlight per NEC 690.31(C)`,
+                `No conduit required — PV wire suitable for exposed runs (NEC 690.31)`,
+              ],
+            },
+            ...(dcRun ? [{
+              label: "DC Home Run",
+              spec: dcRun,
+              notes: [
+                `2 current-carrying conductors: DC +/− (THWN-2, 75°C wet)`,
+                `Wire gauge: #${dcG} AWG from string sizing (NEC 690.8 — 125% of Isc)`,
+                `EGC: #${dcEgc} AWG per NEC 250.122 for ${ocpd}A OCPD`,
+                `${dcRun.wires.length} conductors total → NEC Ch.9 Table 1: 40% fill limit`,
+                `Wire area: ${fmtArea(dcRun.wires)}`,
+                `Conduit: ${dcRun.conduit} EMT (${dcRun.fill}% actual / ${dcRun.limit}% max) per NEC Ch.9 Table 4`,
+              ],
+            }] : []),
+            {
+              label: "AC Branch",
+              spec: acRun,
+              notes: [
+                isComm
+                  ? `3 hots (3-phase) + 1 neutral + 1 EGC = ${acRun.wires.reduce((s, w) => s + w.n, 0)} conductors`
+                  : `2 hots (240V split-phase) + 1 neutral + 1 EGC = ${acRun.wires.reduce((s, w) => s + w.n, 0)} conductors`,
+                `Wire gauge: #${acG} AWG THWN-2 — sized for inverter output current`,
+                `EGC: #${acEgc} AWG per NEC 250.122 for ${ocpd}A OCPD`,
+                `NEC Ch.9 Table 1: ${acRun.limit}% fill limit (${acRun.wires.reduce((s, w) => s + w.n, 0)} conductors)`,
+                `Wire area: ${fmtArea(acRun.wires)}`,
+                `Conduit: ${acRun.conduit} EMT (${acRun.fill}% actual / ${acRun.limit}% max) per NEC Ch.9 Table 4`,
+              ],
+            },
+            {
+              label: "Service Entrance",
+              spec: seRun,
+              notes: [
+                `${es}A service → #${se.cu} AWG Cu per NEC 310.16 / SE sizing table`,
+                isComm
+                  ? `3 hots (3-phase) + 1 neutral + 1 GEC = ${seRun.wires.reduce((s, w) => s + w.n, 0)} conductors`
+                  : `2 hots (240V) + 1 neutral + 1 GEC = ${seRun.wires.reduce((s, w) => s + w.n, 0)} conductors`,
+                `GEC: #${gecG} AWG per NEC 250.66 for ${es}A service`,
+                `Wire area: ${fmtArea(seRun.wires)}`,
+                `Conduit: ${seRun.conduit} EMT (${seRun.fill}% actual / ${seRun.limit}% max) per NEC Ch.9 Table 4`,
+              ],
+            },
+            {
+              label: "GEC",
+              spec: gecRun,
+              notes: [
+                `#${gecG} AWG Bare Cu per NEC 250.66 for ${es}A service`,
+                `No conduit required — NEC 250.64(E): ≥#6 AWG Cu may be run exposed`,
+              ],
+            },
+          ];
+          return (
+            <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
+              <thead>
+                <tr>
+                  <th style={hd}>Circuit</th>
+                  <th style={hd}>Wire Spec</th>
+                  <th style={hd}>Conduit</th>
+                  <th style={{ ...hd, width: "50%" }}>NEC Basis</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i}>
+                    <td style={{ ...cl, fontWeight: 600, whiteSpace: "nowrap" }}>{r.label}</td>
+                    <td style={{ ...cl, whiteSpace: "nowrap" }}>
+                      {r.spec.wires.map((w, j) => (
+                        <div key={j}>{w.n > 1 ? `${w.n}×` : ""}#{w.g} {w.t} ({w.clr})</div>
+                      ))}
+                    </td>
+                    <td style={{ ...cl, whiteSpace: "nowrap" }}>
+                      {r.spec.conduit === "—"
+                        ? <span style={{ color: td }}>None req.</span>
+                        : <>{r.spec.conduit} EMT<br />{r.spec.fill}% / {r.spec.limit}% max</>}
+                    </td>
+                    <td style={clN}>
+                      {r.notes.map((n, j) => <div key={j}>• {n}</div>)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          );
+        })()}
+      </div>
+
       <div style={{ fontFamily: ff, fontSize: 9, color: td, marginTop: 8, lineHeight: 1.6 }}>
         Generic site elevation showing typical equipment placement. Equipment locations are approximate — actual placement depends on site conditions, AHJ requirements, and installer preference.
         {mt === "roof" ? " Residential layout shows inverter on garage/exterior wall with AC disconnect near service entrance." : ""}
         {mt === "ground" ? " Ground mount shows underground trench from array combiner to inverter pad, then overhead/underground to building." : ""}
         {mt === "carport" ? " Carport layout shows combiner on support column with conduit run to building electrical room." : ""}
       </div>
+
+      {/* ═══ PHOTO STUDIO ═══ */}
+      {pht && (
+        <div style={{ ...cd, marginTop: 14 }}>
+          <div
+            onClick={() => setPhOpen(p => !p)}
+            style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}
+          >
+            <span style={{ fontFamily: ff, fontSize: 12, color: ac, fontWeight: 700 }}>
+              {phOpen ? "\u25bc" : "\u25b6"} Photo Studio
+            </span>
+            <span style={{ fontFamily: ff, fontSize: 10, color: td }}>
+              ({pht.filter(p => p.src).length} photo{pht.filter(p => p.src).length !== 1 ? "s" : ""})
+            </span>
+          </div>
+          {phOpen && (
+            <div style={{ marginTop: 10 }}>
+              <PhotosTab pht={pht} sPht={sPht} ap={ap} sAp={sAp} sz={sz} pj={pj} iv={iv} dsg={dsg} dAn={dAn} />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

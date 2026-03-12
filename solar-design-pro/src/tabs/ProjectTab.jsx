@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MODS } from '../data/modules.js';
 import { INVS } from '../data/inverters.js';
+import { callClaude } from '../api/anthropic.js';
 import { ff, fs, c1, c2, bd, ac, tx, td, gn, rd, bl, inp, lb, cd, bt } from '../theme.js';
 
 const compass = (a) => +a === 180 ? "S" : +a === 0 || +a === 360 ? "N" : +a === 90 ? "E" : +a === 270 ? "W" : +a < 180 ? "SE" : "SW";
@@ -15,8 +16,75 @@ export default function ProjectTab({
   ivList, addIv, updIv, delIv, ivs, totalIvKw, pickIv, calcOptQty,
   setTab, chat, addrQ, addrSug, addrOpen, addrLoading, addrRect, addrHi, addrRef, addrInpRef,
   searchAddr, pickAddr, setAddrOpen, updateRect, addrKey,
-  jobs, activeJobId, onNewJob, onLoadJob, onDeleteJob
+  jobs, activeJobId, onNewJob, onLoadJob, onDeleteJob,
+  uPm
 }) {
+  const [billImg, setBillImg] = useState(null);
+  const [billBusy, setBillBusy] = useState(false);
+  const [billResult, setBillResult] = useState("");
+
+  const scanBill = async (file) => {
+    setBillBusy(true); setBillResult("");
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise((res, rej) => { reader.onload = () => res(reader.result); reader.onerror = rej; reader.readAsDataURL(file); });
+      const isPdf = file.type === "application/pdf";
+      if (!isPdf) setBillImg(base64);
+      else setBillImg(null);
+      const [header, data] = base64.split(",");
+      const mediaType = header.match(/data:(.*?);/)?.[1] || "image/jpeg";
+      const contentBlock = isPdf
+        ? { type: "document", source: { type: "base64", media_type: "application/pdf", data } }
+        : { type: "image", source: { type: "base64", media_type: mediaType, data } };
+      const result = await callClaude({
+        system: "You are a solar energy consultant analyzing a utility bill for a PV system design project.",
+        messages: [{ role: "user", content: [
+          contentBlock,
+          { type: "text", text: `Analyze this utility bill and extract all useful information for solar design.
+
+FIRST, output a JSON block with extracted fields (use "" for any field not found):
+\`\`\`json
+{"customer":"Customer full name","address":"Service address","city":"","state":"","zip":"","account":"Account number","meter":"Meter number","utility":"Utility company name","serviceAmps":"Service size in amps","kwhAnnual":"Annual kWh","kwhMonthly":"Average monthly kWh","rate":"$/kWh"}
+\`\`\`
+
+THEN format the full analysis as:
+
+**Customer**: Name, service address, account #, meter #
+**Utility**: Company, rate schedule/tariff
+**Usage**: Monthly kWh (list if visible), annual total, average monthly
+**Rates**: $/kWh (per tier if tiered), demand charges, fixed charges
+**Service**: Voltage, phase, service size (amps)
+**Peak Demand**: kW if shown
+
+Then under **Recommendations**, explain which fields in our solar design tool this data could auto-fill or inform:
+- Target system size (kW) based on usage
+- Electrical service amps
+- Address fields
+- ROI/payback estimates from rate data
+- Any other design considerations` }
+        ]}],
+        max_tokens: 2000,
+      });
+      // Extract structured JSON and auto-fill permit fields
+      const jm = result.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jm && uPm) {
+        try {
+          const bd = JSON.parse(jm[1]);
+          if (bd.customer) uPm("own", bd.customer);
+          if (bd.address) {
+            const full = [bd.address, bd.city, bd.state, bd.zip].filter(Boolean).join(", ");
+            uPm("ownAd", full);
+          }
+          if (bd.utility) uPm("util", bd.utility);
+          if (bd.account) uPm("uact", bd.account);
+          if (bd.meter) uPm("umtr", bd.meter);
+        } catch {}
+      }
+      setBillResult(result.replace(/```json[\s\S]*?```\n?/, "").trim());
+    } catch (e) { setBillResult("Error: " + e.message); }
+    setBillBusy(false);
+  };
+
   return (
     <div style={{ maxWidth: 920, margin: "0 auto" }} className="fi">
 
@@ -372,6 +440,26 @@ export default function ProjectTab({
             <textarea style={{ ...inp, minHeight: 70, resize: "vertical" }} value={pj.ds2 || ""} onChange={e => u("ds2", e.target.value)} placeholder="HOA, utility, permitting, battery interest…" />
           </div>
         </div>
+      </div>
+
+      {/* ═══ UTILITY BILL SCANNER ═══ */}
+      <div style={{ ...cd, marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: ac, marginBottom: 10, fontFamily: ff, textTransform: "uppercase", letterSpacing: "0.08em" }}>Utility Bill Scanner</div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <label style={{ ...bt(true), fontSize: 11, padding: "8px 14px", cursor: billBusy ? "wait" : "pointer", display: "inline-block", opacity: billBusy ? 0.6 : 1 }}>
+            {billBusy ? "Analyzing..." : "Upload Bill Image"}
+            <input type="file" accept="image/*,.pdf" style={{ display: "none" }} disabled={billBusy}
+              onChange={e => { if (e.target.files?.[0]) scanBill(e.target.files[0]); e.target.value = ""; }} />
+          </label>
+          <span style={{ fontSize: 10, fontFamily: ff, color: td }}>JPG, PNG, or PDF</span>
+          {billImg && <img src={billImg} style={{ maxWidth: 100, maxHeight: 60, borderRadius: 4, border: `1px solid ${bd}`, objectFit: "cover" }} />}
+        </div>
+        {billBusy && <div style={{ marginTop: 10, fontSize: 11, fontFamily: ff, color: td }}>Scanning utility bill for usage, rates, and service info...</div>}
+        {billResult && (
+          <div style={{ marginTop: 10, padding: 12, background: c2, borderRadius: 6, fontSize: 11, fontFamily: ff, lineHeight: 1.7, whiteSpace: "pre-wrap", color: tx, maxHeight: 400, overflow: "auto" }}>
+            {billResult}
+          </div>
+        )}
       </div>
 
       {/* ═══ QUICK STRING SIZING ═══ */}

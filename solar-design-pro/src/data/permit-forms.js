@@ -104,3 +104,50 @@ export const PERMIT_FORMS = [
   { st: "PA", co: "Mercer", pl: null, cat: "reference", nm: "Mercer County Regional Planning Commission", url: "https://www.mcrpc.com/", dept: "MCRPC", ph: "(724) 981-2412" },
   { st: "PA", co: "Beaver", pl: null, cat: "reference", nm: "Beaver County Planning & Redevelopment", url: "https://www.beavercountypa.gov/departments/planning-commission", dept: "Beaver County Planning Commission", ph: "(724) 770-4421" },
 ];
+
+// ── Utility Interconnection Forms ──
+// Keys: ut=utility name, st=state code, counties=[served counties],
+//   cat=interconnect|netmeter|reference, nm=display name, url=direct PDF/page URL,
+//   dept=department/contact, ph=phone, em=email
+export const UTILITY_FORMS = [
+  // ═══════════════════════════════════════════
+  // OHIO EDISON (FirstEnergy) — Mahoning, Trumbull, Columbiana
+  // ═══════════════════════════════════════════
+  { ut: "Ohio Edison", st: "OH", counties: ["Mahoning", "Trumbull", "Columbiana"], cat: "interconnect", nm: "OH Level 1 Interconnection Application (≤25 kW)", url: "https://www.firstenergycorp.com/content/dam/feconnect/files/retail/oh/OH-Level-1-Application.pdf", dept: "Ohio Edison Interconnection", ph: "1-800-633-4766", em: "OE_interconnection@firstenergycorp.com" },
+  { ut: "Ohio Edison", st: "OH", counties: ["Mahoning", "Trumbull", "Columbiana"], cat: "interconnect", nm: "OH Level 2/3 Interconnection Application (>25 kW)", url: "https://www.firstenergycorp.com/content/dam/feconnect/files/retail/oh/OH-Level-23-Application.pdf", dept: "Ohio Edison Interconnection", ph: "1-800-633-4766", em: "OE_interconnection@firstenergycorp.com" },
+  { ut: "Ohio Edison", st: "OH", counties: ["Mahoning", "Trumbull", "Columbiana"], cat: "netmeter", nm: "OH Net Energy Metering Rider Application", url: "https://www.firstenergycorp.com/content/dam/feconnect/files/retail/oh/OH-Net-Metering-Rider-Application.pdf", dept: "Ohio Edison Interconnection", ph: "1-800-633-4766", em: "OE_interconnection@firstenergycorp.com" },
+  { ut: "Ohio Edison", st: "OH", counties: ["Mahoning", "Trumbull", "Columbiana"], cat: "reference", nm: "Customer Interconnection Guide — Single Phase", url: "https://www.firstenergycorp.com/content/dam/feconnect/files/retail/Customer-Interconnection-Guide-Single-Phase.pdf", dept: "FirstEnergy", ph: "1-800-633-4766" },
+  { ut: "Ohio Edison", st: "OH", counties: ["Mahoning", "Trumbull", "Columbiana"], cat: "reference", nm: "Customer Interconnection Guide — Three Phase", url: "https://www.firstenergycorp.com/content/dam/feconnect/files/retail/Customer-Interconnection-Guide-Three-Phase.pdf", dept: "FirstEnergy", ph: "1-800-633-4766" },
+
+  // ═══════════════════════════════════════════
+  // AEP OHIO — Columbiana County (partial)
+  // ═══════════════════════════════════════════
+  { ut: "AEP Ohio", st: "OH", counties: ["Columbiana"], cat: "interconnect", nm: "AEP Ohio Short Form Application Tips (≤25 kW)", url: "https://www.aepohio.com/lib/docs/business/builders/ShortFormInformation20250218.pdf", dept: "AEP Ohio DG Coordinator", ph: "(614) 883-6775", em: "dgcoordinator-ohio@aep.com" },
+  { ut: "AEP Ohio", st: "OH", counties: ["Columbiana"], cat: "interconnect", nm: "AEP Ohio Standard Form Application Tips (>25 kW)", url: "https://www.aepohio.com/lib/docs/business/builders/StandardFormInformation20241021.pdf", dept: "AEP Ohio DG Coordinator", ph: "(614) 883-6775", em: "dgcoordinator-ohio@aep.com" },
+  { ut: "AEP Ohio", st: "OH", counties: ["Columbiana"], cat: "reference", nm: "AEP Ohio Quick Start Guide — Rooftop Solar", url: "https://www.aepohio.com/lib/docs/cleanenergy/renewable/solar/QuickStartGuide-AEPOhio.pdf", dept: "AEP Ohio", ph: "(614) 883-6775" },
+  { ut: "AEP Ohio", st: "OH", counties: ["Columbiana"], cat: "reference", nm: "AEP Ohio Technical Interconnection Requirements", url: "https://www.aepohio.com/lib/docs/business/builders/AEPOhioTechnicalRequirementsforInterconnectionService20250218.pdf", dept: "AEP Ohio", ph: "(614) 883-6775" },
+
+  // ═══════════════════════════════════════════
+  // PENN POWER (FirstEnergy) — Lawrence, Mercer
+  // ═══════════════════════════════════════════
+  { ut: "Penn Power", st: "PA", counties: ["Lawrence", "Mercer"], cat: "interconnect", nm: "PA Level 1 Interconnection Application (≤10 kW)", url: "https://www.firstenergycorp.com/content/dam/feconnect/files/retail/pa/PA-Level-1-Interconnection-Application-Agreement.pdf", dept: "Penn Power Interconnection", ph: "1-800-720-3600", em: "PP_interconnection@firstenergycorp.com" },
+  { ut: "Penn Power", st: "PA", counties: ["Lawrence", "Mercer"], cat: "interconnect", nm: "PA Level 2/3/4 Interconnection Application (>10 kW)", url: "https://www.firstenergycorp.com/content/dam/feconnect/files/retail/pa/PA-Level-234-Interconnection-Agreement.pdf", dept: "Penn Power Interconnection", ph: "1-800-720-3600", em: "PP_interconnection@firstenergycorp.com" },
+  { ut: "Penn Power", st: "PA", counties: ["Lawrence", "Mercer"], cat: "netmeter", nm: "PA Net Energy Metering Rider Application", url: "https://www.firstenergycorp.com/content/dam/feconnect/files/retail/pa/PA-Net-Metering-Rider-Application.pdf", dept: "Penn Power Interconnection", ph: "1-800-720-3600", em: "PP_interconnection@firstenergycorp.com" },
+  { ut: "Penn Power", st: "PA", counties: ["Lawrence", "Mercer"], cat: "reference", nm: "Net Metering Primer", url: "https://www.firstenergycorp.com/content/dam/feconnect/files/retail/Net-Metering-Primer.pdf", dept: "FirstEnergy", ph: "1-800-720-3600" },
+
+  // ═══════════════════════════════════════════
+  // DUQUESNE LIGHT — Beaver County (+ Allegheny)
+  // ═══════════════════════════════════════════
+  { ut: "Duquesne Light", st: "PA", counties: ["Beaver", "Allegheny"], cat: "interconnect", nm: "Duquesne Light Level 1 Interconnection Application", url: "https://www.duquesnelight.com/docs/default-source/pdf-library/level-1---interconnection-application.pdf", dept: "Duquesne Light Interconnection", ph: "1-888-393-7100", em: "interconnection@duqlight.com" },
+  { ut: "Duquesne Light", st: "PA", counties: ["Beaver", "Allegheny"], cat: "interconnect", nm: "Duquesne Light Level 1 Certificate of Completion", url: "https://duquesnelight.com/docs/default-source/default-document-library/Level-1-Certificate-of-Completion.pdf", dept: "Duquesne Light Interconnection", ph: "1-888-393-7100", em: "interconnection@duqlight.com" },
+  { ut: "Duquesne Light", st: "PA", counties: ["Beaver", "Allegheny"], cat: "interconnect", nm: "Duquesne Light Level 2/3/4 Interconnection Application", url: "https://duquesnelight.com/docs/default-source/default-document-library/Levels-2-3-or-4-Interconnection-Application-Updated.pdf", dept: "Duquesne Light Interconnection", ph: "1-888-393-7100", em: "interconnection@duqlight.com" },
+  { ut: "Duquesne Light", st: "PA", counties: ["Beaver", "Allegheny"], cat: "netmeter", nm: "Duquesne Light Net Metering Process", url: "https://duquesnelight.com/docs/default-source/default-document-library/duquesne-light-net-metering-process.pdf", dept: "Duquesne Light", ph: "1-888-393-7100", em: "interconnection@duqlight.com" },
+  { ut: "Duquesne Light", st: "PA", counties: ["Beaver", "Allegheny"], cat: "reference", nm: "Duquesne Light Interconnection Technical Requirements", url: "https://duquesnelight.com/docs/default-source/default-document-library/Duquesne-Light-Distribution-System-Generation-Interconnection-Requirements.pdf", dept: "Duquesne Light", ph: "1-888-393-7100" },
+
+  // ═══════════════════════════════════════════
+  // MUNICIPAL / CO-OP — Contact only
+  // ═══════════════════════════════════════════
+  { ut: "City of Niles Electric", st: "OH", counties: ["Trumbull"], cat: "reference", nm: "City of Niles Electric Dept (call for interconnection)", url: "https://thecityofniles.com/services/utilities/electric/", dept: "City of Niles Electric", ph: "(330) 544-9000 x1150" },
+  { ut: "City of Hubbard Electric", st: "OH", counties: ["Trumbull"], cat: "reference", nm: "City of Hubbard Electric Dept (call for interconnection)", url: "https://www.cityofhubbard-oh.gov/electric/", dept: "City of Hubbard Electric", ph: "(330) 534-3054" },
+  { ut: "Northwestern REC", st: "PA", counties: ["Mercer", "Crawford"], cat: "reference", nm: "Northwestern Rural Electric Co-op (call for interconnection)", url: "https://northwesternrec.com/", dept: "Northwestern REC", ph: "1-800-352-0014" },
+];

@@ -326,91 +326,85 @@ export default function AnnotationOverlay({
       {markers.length > 0 && (
         <div style={{ ...cd, marginTop: 8, background: c2 }}>
           <div style={{ ...lb, marginBottom: 6 }}>Equipment</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 4 }}>
           {markers.map((mk, i) => {
             const mcat = MCATS.find(c => c.id === mk.ct) || MCATS[MCATS.length - 1];
             return (
-              <div key={mk.id} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, width: 52, flexShrink: 0 }}>
-                  <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke={mcat.cl} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d={mcat.svg} /></svg>
-                  <span style={{ fontFamily: ff, fontSize: 10, color: ac }}>#{i + 1}</span>
+              <div key={mk.id} style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 3, width: 44, flexShrink: 0 }}>
+                  <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke={mcat.cl} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d={mcat.svg} /></svg>
+                  <span style={{ fontFamily: ff, fontSize: 9, color: ac }}>#{i + 1}</span>
                 </div>
-                <input style={{ ...inp, flex: 1, fontSize: 11 }} value={mk.lb} onChange={e => updAn(d => ({ ...d, mk: d.mk.map(m => m.id === mk.id ? { ...m, lb: e.target.value } : m) }))} />
-                <select style={{ ...inp, width: 130, fontSize: 11 }} value={mk.ct} onChange={e => updAn(d => ({ ...d, mk: d.mk.map(m => m.id === mk.id ? { ...m, ct: e.target.value } : m) }))}>
+                <input style={{ ...inp, flex: 1, fontSize: 10 }} value={mk.lb} onChange={e => updAn(d => ({ ...d, mk: d.mk.map(m => m.id === mk.id ? { ...m, lb: e.target.value } : m) }))} />
+                <select style={{ ...inp, width: 110, fontSize: 10 }} value={mk.ct} onChange={e => updAn(d => ({ ...d, mk: d.mk.map(m => m.id === mk.id ? { ...m, ct: e.target.value } : m) }))}>
                   {MCATS.map(c => <option key={c.id} value={c.id}>{c.ic} {c.lb}</option>)}</select>
-                <input style={{ ...inp, flex: 2, fontSize: 11 }} value={mk.dt} onChange={e => updAn(d => ({ ...d, mk: d.mk.map(m => m.id === mk.id ? { ...m, dt: e.target.value } : m) }))} placeholder="Details..." />
-                <button style={{ ...bt(false), color: rd, fontSize: 12, padding: "2px 6px" }} onClick={() => deleteMk(mk.id)}>✕</button>
+                <input style={{ ...inp, flex: 1, fontSize: 10 }} value={mk.dt} onChange={e => updAn(d => ({ ...d, mk: d.mk.map(m => m.id === mk.id ? { ...m, dt: e.target.value } : m) }))} placeholder="Details..." />
+                <button style={{ ...bt(false), color: rd, fontSize: 10, padding: "1px 5px" }} onClick={() => deleteMk(mk.id)}>✕</button>
               </div>);
           })}
+          </div>
         </div>)}
 
       {lines.length > 0 && (
         <div style={{ ...cd, marginTop: 8, background: c2 }}>
           <div style={{ ...lb, marginBottom: 6 }}>Conduit Runs</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 6 }}>
           {lines.map((ln, li) => {
             const a = markers.find(m => m.id === ln.from), b = ln.to ? markers.find(m => m.id === ln.to) : null;
             const ai = markers.indexOf(a), bi = b ? markers.indexOf(b) : -1;
             const isSelRun = selLn === ln.id;
             const isSite = !!ln.site;
-            const header = isSite
-              ? <><span style={{ fontFamily: ff, fontSize: 11, color: isSelRun ? "#0891b2" : ac, fontWeight: 700 }}>⚡ {ln.label || ln.site}</span>
-                  <span style={{ fontFamily: ff, fontSize: 11, color: tx }}>from #{ai + 1} {a?.lb || "?"} → off-frame</span></>
-              : <><span style={{ fontFamily: ff, fontSize: 11, color: isSelRun ? "#0891b2" : "#06b6d4", fontWeight: 700 }}>Run {li + 1}</span>
-                  <span style={{ fontFamily: ff, fontSize: 11, color: tx }}>#{ai + 1} {a?.lb || "?"} → #{bi + 1} {b?.lb || "?"}</span></>;
+            const runLabel = isSite ? `⚡ ${ln.label || ln.site}` : `Run ${li + 1}`;
+            const runRoute = isSite
+              ? `#${ai + 1} ${a?.lb || "?"} → off-frame`
+              : `#${ai + 1} ${a?.lb || "?"} → #${bi + 1} ${b?.lb || "?"}`;
             return (
-              <div key={ln.id} onClick={() => setSelLn(ln.id)} style={{ marginBottom: 10, padding: 8, background: c1, borderRadius: 6, border: `2px solid ${isSelRun ? "#0891b2" : bd}`, cursor: "pointer" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                  {header}
-                  <button style={{ ...bt(false), color: rd, fontSize: 11, padding: "1px 6px", marginLeft: "auto" }} onClick={() => deleteLn(ln.id)}>✕</button>
+              <div key={ln.id} onClick={() => setSelLn(ln.id)} style={{ padding: 6, background: c1, borderRadius: 5, border: `2px solid ${isSelRun ? "#0891b2" : bd}`, cursor: "pointer" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+                  <span style={{ fontFamily: ff, fontSize: 10, color: isSelRun ? "#0891b2" : isSite ? ac : "#06b6d4", fontWeight: 700 }}>{runLabel}</span>
+                  <span style={{ fontFamily: ff, fontSize: 9, color: tx, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{runRoute}</span>
+                  <button style={{ ...bt(false), color: rd, fontSize: 10, padding: "1px 5px" }} onClick={() => deleteLn(ln.id)}>✕</button>
                 </div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
                   <div>
-                    <div style={{ fontSize: 9, color: td, fontFamily: ff, marginBottom: 1 }}>LABEL</div>
-                    <input style={{ ...sSel, width: 100 }} value={ln.label || ""} placeholder="e.g. DC Homerun" onChange={e => updLn(ln.id, "label", e.target.value)} />
+                    <div style={{ fontSize: 8, color: td, fontFamily: ff }}>LABEL</div>
+                    <input style={{ ...sSel, width: 80, fontSize: 10 }} value={ln.label || ""} placeholder="e.g. DC" onChange={e => updLn(ln.id, "label", e.target.value)} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 9, color: td, fontFamily: ff, marginBottom: 1 }}>LENGTH (ft)</div>
-                    <input style={{ ...sSel, width: 60 }} type="number" min="0" value={ln.len || ""} placeholder="0"
+                    <div style={{ fontSize: 8, color: td, fontFamily: ff }}>FT</div>
+                    <input style={{ ...sSel, width: 40, fontSize: 10 }} type="number" min="0" value={ln.len || ""} placeholder="0"
                       onChange={e => updLn(ln.id, "len", +e.target.value || 0)} />
                   </div>
                   {!isSite && <div>
-                    <div style={{ fontSize: 9, color: td, fontFamily: ff, marginBottom: 1 }}>ROUTE</div>
-                    <button style={{ ...sSel, width: 36, cursor: "pointer", textAlign: "center", background: c2 }}
+                    <div style={{ fontSize: 8, color: td, fontFamily: ff }}>DIR</div>
+                    <button style={{ ...sSel, width: 30, fontSize: 10, cursor: "pointer", textAlign: "center", background: c2 }}
                       onClick={() => updLn(ln.id, "dir", (ln.dir || "h") === "h" ? "v" : "h")}>
                       {(ln.dir || "h") === "h" ? "H↱" : "V↳"}
                     </button>
                   </div>}
                   <div>
-                    <div style={{ fontSize: 9, color: td, fontFamily: ff, marginBottom: 1 }}>BEND R</div>
-                    <input style={{ ...sSel, width: 40 }} type="number" min="0" max="50" value={ln.bendR ?? DEF_BEND}
-                      onChange={e => updLn(ln.id, "bendR", +e.target.value || 0)} />
-                  </div>
-                  {!isSite && ln.co != null && <div>
-                    <div style={{ fontSize: 9, color: td, fontFamily: ff, marginBottom: 1 }}>POS</div>
-                    <button style={{ ...sSel, width: 42, cursor: "pointer", textAlign: "center", background: c2, color: "#06b6d4" }}
-                      title="Reset to auto-position" onClick={() => updLn(ln.id, "co", null)}>Reset</button>
-                  </div>}
-                  <div>
-                    <div style={{ fontSize: 9, color: td, fontFamily: ff, marginBottom: 1 }}>WIRE AWG</div>
-                    <select style={{ ...sSel, width: 72 }} value={ln.wire || ""} onChange={e => updLn(ln.id, "wire", e.target.value)}>
+                    <div style={{ fontSize: 8, color: td, fontFamily: ff }}>AWG</div>
+                    <select style={{ ...sSel, width: 58, fontSize: 10 }} value={ln.wire || ""} onChange={e => updLn(ln.id, "wire", e.target.value)}>
                       <option value="">—</option>{WIRE_OPTS.map(w => <option key={w} value={w}>{w}</option>)}</select>
                   </div>
                   <div>
-                    <div style={{ fontSize: 9, color: td, fontFamily: ff, marginBottom: 1 }}>WIRE TYPE</div>
-                    <select style={{ ...sSel, width: 90 }} value={ln.wireType || "THWN-2"} onChange={e => updLn(ln.id, "wireType", e.target.value)}>
+                    <div style={{ fontSize: 8, color: td, fontFamily: ff }}>TYPE</div>
+                    <select style={{ ...sSel, width: 78, fontSize: 10 }} value={ln.wireType || "THWN-2"} onChange={e => updLn(ln.id, "wireType", e.target.value)}>
                       {WIRE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select>
                   </div>
                   <div>
-                    <div style={{ fontSize: 9, color: td, fontFamily: ff, marginBottom: 1 }}># COND.</div>
-                    <input style={{ ...sSel, width: 48 }} type="number" min="1" max="20" value={ln.qty || "3"} onChange={e => updLn(ln.id, "qty", e.target.value)} />
+                    <div style={{ fontSize: 8, color: td, fontFamily: ff }}>#</div>
+                    <input style={{ ...sSel, width: 34, fontSize: 10 }} type="number" min="1" max="20" value={ln.qty || "3"} onChange={e => updLn(ln.id, "qty", e.target.value)} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 9, color: td, fontFamily: ff, marginBottom: 1 }}>CONDUIT</div>
-                    <select style={{ ...sSel, width: 100 }} value={ln.conduit || "¾\" EMT"} onChange={e => updLn(ln.id, "conduit", e.target.value)}>
+                    <div style={{ fontSize: 8, color: td, fontFamily: ff }}>CONDUIT</div>
+                    <select style={{ ...sSel, width: 84, fontSize: 10 }} value={ln.conduit || "¾\" EMT"} onChange={e => updLn(ln.id, "conduit", e.target.value)}>
                       {CONDUIT_OPTS.map(c => <option key={c} value={c}>{c}</option>)}</select>
                   </div>
                 </div>
               </div>);
           })}
+          </div>
         </div>)}
     </>
   );

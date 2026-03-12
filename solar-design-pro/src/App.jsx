@@ -33,7 +33,7 @@ import ElectricalTab from './tabs/ElectricalTab.jsx';
 import LayoutTab from './tabs/LayoutTab.jsx';
 import SiteElectricalTab from './tabs/SiteElectricalTab.jsx';
 import PlansTab from './tabs/PlansTab.jsx';
-import PhotosTab from './tabs/PhotosTab.jsx';
+import PermittingTab from './tabs/PermittingTab.jsx';
 import PackListTab from './tabs/PackListTab.jsx';
 import PricingTab from './tabs/PricingTab.jsx';
 
@@ -50,6 +50,7 @@ const DEF_PHT = [
   { id: 1, src: null, nm: "Exterior Wall", ds: "", mk: [], ln: [], zn: "exterior" },
   { id: 2, src: null, nm: "Basement", ds: "", mk: [], ln: [], zn: "basement" },
 ];
+const DEF_PM = { jur: null, reqs: null, own: "", ownAd: "", ownPh: "", ownEm: "", cnm: "Canopy Solar", clic: "", cph: "(330) 702-0147", cem: "", cad: "1020 W State St Suite B, Salem, OH 44460", util: "", uact: "", umtr: "", pid: "", pnlBr: "", fedPt: "", rsd: "", monSys: "", batSz: "" };
 
 function getJobIndex() {
   try { const s = localStorage.getItem(JOBS_KEY); return s ? JSON.parse(s) : []; } catch { return []; }
@@ -130,6 +131,8 @@ export default function App() {
     { id: 2, src: null, nm: "Basement", ds: "", mk: [], ln: [], zn: "basement" },
   ]), [ap, sAp] = useState(1);
   const [dAn, sDan] = useState({ mk: [], ln: [] });
+  const [pm, sPm] = useState(saved.current?.pm || { ...DEF_PM });
+  const uPm = (k, v) => sPm(p => ({ ...p, [k]: v }));
   const [logo, setLogo] = useState(DEFAULT_LOGO);
   const logoRef = useRef(null);
   const printRef = useRef(null);
@@ -366,7 +369,7 @@ export default function App() {
     const id = Date.now().toString();
     const entry = { id, name: "New Job", address: "", kw: "", mt: "roof", updatedAt: new Date().toISOString() };
     localStorage.setItem(JOBS_KEY, JSON.stringify([entry]));
-    localStorage.setItem(jobKey(id), JSON.stringify({ pj, ivList, modGroups, roofType, geo, wr, dsg }));
+    localStorage.setItem(jobKey(id), JSON.stringify({ pj, ivList, modGroups, roofType, geo, wr, dsg, pm }));
     localStorage.setItem(ACTIVE_KEY, id);
     setActiveJobId(id);
     setJobs([entry]);
@@ -384,6 +387,7 @@ export default function App() {
       setRoofType(data.roofType || "gable");
       sWr(data.wr || { ...DEF_WR });
       sDsg(data.dsg || null);
+      sPm(data.pm || { ...DEF_PM });
       sPk([]); sDan({ mk: [], ln: [] }); sMs([]); sMkr([]);
       sPht(DEF_PHT.map(p => ({ ...p, mk: [], ln: [] })));
       setLayPos({}); setLaySel(null); setInvRec("");
@@ -399,11 +403,11 @@ export default function App() {
     const idx = getJobIndex();
     idx.unshift(entry);
     localStorage.setItem(JOBS_KEY, JSON.stringify(idx));
-    localStorage.setItem(jobKey(id), JSON.stringify({ pj: DEF_PJ, ivList: [], modGroups: DEF_GROUPS, roofType: "gable", geo: null, wr: DEF_WR, dsg: null }));
+    localStorage.setItem(jobKey(id), JSON.stringify({ pj: DEF_PJ, ivList: [], modGroups: DEF_GROUPS, roofType: "gable", geo: null, wr: DEF_WR, dsg: null, pm: DEF_PM }));
     localStorage.setItem(ACTIVE_KEY, id);
     sPj({ ...DEF_PJ }); setGeo(null); sIvList([]);
     setModGroups([{ ...DEF_GROUPS[0], id: Date.now() }]);
-    setRoofType("gable"); sWr({ ...DEF_WR }); sDsg(null);
+    setRoofType("gable"); sWr({ ...DEF_WR }); sDsg(null); sPm({ ...DEF_PM });
     sPk([]); sDan({ mk: [], ln: [] }); sMs([]); sMkr([]);
     sPht(DEF_PHT.map(p => ({ ...p, mk: [], ln: [] })));
     setLayPos({}); setLaySel(null); setInvRec("");
@@ -458,7 +462,7 @@ export default function App() {
   useEffect(() => {
     const t = setTimeout(() => {
       try {
-        const data = JSON.stringify({ pj, ivList, modGroups, roofType, geo, wr, dsg });
+        const data = JSON.stringify({ pj, ivList, modGroups, roofType, geo, wr, dsg, pm });
         localStorage.setItem(SAVE_KEY, data);
         if (activeJobId) {
           localStorage.setItem(jobKey(activeJobId), data);
@@ -473,7 +477,7 @@ export default function App() {
       } catch {}
     }, 500);
     return () => clearTimeout(t);
-  }, [pj, ivList, modGroups, roofType, geo, wr, dsg, activeJobId]);
+  }, [pj, ivList, modGroups, roofType, geo, wr, dsg, pm, activeJobId]);
 
   // ── Effects ──
   useEffect(() => { if (dsg && md && iv) { sPk(mkPack(md, iv, dsg, sz, wr, pj.es, pht, ivs, rack)); } }, [dsg, md, iv, sz, wr, pj.es, pht, ivs, rack]);
@@ -640,6 +644,7 @@ RULES:
           addrRef={addrRef} addrInpRef={addrInpRef} searchAddr={searchAddr} pickAddr={pickAddr}
           setAddrOpen={setAddrOpen} updateRect={updateRect} addrKey={addrKey}
           jobs={jobs} activeJobId={activeJobId} onNewJob={newJob} onLoadJob={loadJob} onDeleteJob={deleteJob}
+          uPm={uPm}
         />}
 
         {tab === "ai" && <AiDesignTab ms={ms} ci={ci} sCi={sCi} cb={cb} chat={chat} cr={cr} />}
@@ -663,7 +668,8 @@ RULES:
             rack={rack} rackCfg={rackCfg} setRackCfg={setRackCfg}
           />
           <SiteElectricalTab pj={pj} sz={sz} iv={iv} dsg={dsg} dAn={dAn} sDan={sDan}
-            modGroups={modGroups} layPos={layPos} md={md} ivs={ivs} />
+            modGroups={modGroups} layPos={layPos} md={md} ivs={ivs}
+            pht={pht} sPht={sPht} ap={ap} sAp={sAp} />
         </>}
 
         {tab === "plans" && <PlansTab
@@ -674,7 +680,11 @@ RULES:
           ivs={ivs} totalIvKw={totalIvKw} rack={rack}
         />}
 
-        {tab === "photos" && <PhotosTab pht={pht} sPht={sPht} ap={ap} sAp={sAp} sz={sz} pj={pj} iv={iv} dsg={dsg} dAn={dAn} />}
+        {tab === "permitting" && <PermittingTab
+          pj={pj} pm={pm} uPm={uPm} geo={geo} md={md} iv={iv} sz={sz} dsg={dsg} pk={pk}
+          rack={rack} modGroups={modGroups} totalMods={totalMods} totalKw={totalKw}
+          ivs={ivs} totalIvKw={totalIvKw}
+        />}
 
         {tab === "packlist" && <PackListTab pk={pk} dsg={dsg} md={md} iv={iv} sz={sz} pj={pj} sDsg={sDsg} mkr={mkr} />}
 

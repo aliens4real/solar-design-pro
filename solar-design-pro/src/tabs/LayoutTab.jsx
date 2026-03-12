@@ -105,8 +105,9 @@ export default function LayoutTab({
   const zFor = gid => zoom[gid] || 1;
   const setZ = (gid, v) => setZoom(p => ({ ...p, [gid]: Math.max(0.25, Math.min(4, v)) }));
 
+
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto" }} className="fi">
+    <div style={{ maxWidth: 1300, margin: "0 auto" }} className="fi">
       {/* ═══ HEADER ═══ */}
       <div style={{ display: "flex", gap: 10, marginBottom: 14, alignItems: "center", flexWrap: "wrap" }}>
         <h2 style={{ fontFamily: ff, fontSize: 16, color: ac, margin: 0, fontWeight: 700 }}>{"\u25eb"} Roof Layout Designer</h2>
@@ -226,7 +227,7 @@ export default function LayoutTab({
               const maxSpanPx = rack.maxSpan * sc * 25.4;
               const ovPx = Math.min(sz.w * 0.15, 4 * sc * 25.4);
               const pgData = rack.perGroup.find(p => p.gid === g.id);
-              const o = { rails: [], feet: [], splices: [], mid: [], end: [] };
+              const o = { rails: [], feet: [], splices: [], mid: [], end: [], rowLabels: [] };
               rows.forEach((row, ri) => {
                 const xs = [...row.mods].sort((a, b) => a.x - b.x);
                 const x0 = Math.min(...xs.map(m => m.x));
@@ -234,6 +235,8 @@ export default function LayoutTab({
                 const y0 = Math.min(...xs.map(m => m.y));
                 const rsx = x0 - ovPx, rex = x1 + ovPx, rlen = rex - rsx;
                 const ry1 = y0 + sz.h * 0.22, ry2 = y0 + sz.h * 0.78;
+                // Row label (left side)
+                o.rowLabels.push({ x: rsx - 6, y: (ry1 + ry2) / 2, text: `R${ri + 1}` });
                 // Rails
                 o.rails.push({ x1: rsx, y1: ry1, x2: rex, y2: ry1 }, { x1: rsx, y1: ry2, x2: rex, y2: ry2 });
                 // Feet
@@ -415,6 +418,9 @@ export default function LayoutTab({
                   </div>
                 </div>
 
+                {/* ──── Side-by-side: Canvas + Foot Map ──── */}
+                <div style={{ display: "flex", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
+                  <div style={{ flex: 3, minWidth: 400 }}>
                 {/* ──── Scrollable Canvas Container ──── */}
                 <div style={{
                   maxHeight: 520, overflow: "auto", borderRadius: 6, border: `1px solid ${bd}`
@@ -520,6 +526,11 @@ export default function LayoutTab({
                             <line key={`ec${i}`} x1={c.x} y1={c.y - 5} x2={c.x} y2={c.y + 5}
                               stroke={RC.end} strokeWidth="2.5" strokeLinecap="round" opacity="0.8" />
                           ))}
+                          {/* Row Labels */}
+                          {rackOv.rowLabels.map((l, i) => (
+                            <text key={`rl${i}`} x={l.x} y={l.y} fill={RC.rail} fontSize="10" fontFamily={ff}
+                              fontWeight="700" dominantBaseline="central" textAnchor="end" opacity="0.85">{l.text}</text>
+                          ))}
                         </>}
                       </svg>
 
@@ -580,6 +591,173 @@ export default function LayoutTab({
                   <span>Scale: 1ft = {gridStep}px</span>
                   <span>{mods.length} of {mods.length} placed</span>
                 </div>
+                  </div>{/* end left column */}
+
+                  {/* ──── Right Column: Foot Center Map ──── */}
+                  {footMap && (() => {
+                    const fm = footMap;
+                    const r0 = fm.rows[0];
+                    const svgId = `foot-map-${g.id}`;
+                    const printFootMap = () => {
+                      const svgEl = document.getElementById(svgId);
+                      if (!svgEl) return;
+                      const w = window.open('', '_blank');
+                      w.document.write(`<!DOCTYPE html><html><head><title>Foot Centers — ${g.nm || 'Face'}</title>
+                        <style>body{margin:20px;text-align:center}svg{max-width:100%;height:auto}
+                        h2{font-family:system-ui;font-size:16px;margin-bottom:12px}</style></head>
+                        <body><h2>FOOT CENTER LOCATIONS — ${g.nm || 'Face'}</h2>${svgEl.outerHTML}</body></html>`);
+                      w.document.close();
+                      setTimeout(() => w.print(), 300);
+                    };
+
+                    return (
+                      <div style={{ flex: 2, minWidth: 280 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                          <span style={{ fontFamily: ff, fontSize: 10, color: ac, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                            Foot Center Locations{g.nm ? ` — ${g.nm}` : ""}
+                          </span>
+                          <div style={{ flex: 1 }} />
+                          <button onClick={printFootMap} style={{ ...bt(false), fontSize: 9, padding: "3px 8px" }}>Print</button>
+                        </div>
+
+                        <svg id={svgId} viewBox={`${fm.vb.x} ${fm.vb.y} ${fm.vb.w} ${fm.vb.h}`}
+                          style={{ width: "100%", maxHeight: 400, background: "#fff", borderRadius: 4, border: `1px solid ${bd}` }}>
+                          {/* Module outlines */}
+                          {fm.rows.map((row, ri) =>
+                            row.modRects.map((r, mi) => (
+                              <rect key={`gm${ri}-${mi}`} x={r.x} y={r.y} width={r.w} height={r.h}
+                                fill="#e8f0fe" stroke="#90b4e0" strokeWidth={0.8} rx={1} />
+                            ))
+                          )}
+
+                          {/* Thin rail reference lines + row labels */}
+                          {fm.rows.map((row, ri) => (
+                            <g key={`rl${ri}`}>
+                              <line x1={row.rsx} y1={row.ry1} x2={row.rex} y2={row.ry1}
+                                stroke="#bbb" strokeWidth={0.3} />
+                              <line x1={row.rsx} y1={row.ry2} x2={row.rex} y2={row.ry2}
+                                stroke="#bbb" strokeWidth={0.3} />
+                              <text x={row.rsx - 6} y={(row.ry1 + row.ry2) / 2} fill="#555" fontSize="10"
+                                fontFamily={ff} fontWeight="700" dominantBaseline="central" textAnchor="end">R{ri + 1}</text>
+                            </g>
+                          ))}
+
+                          {/* Extension lines from each foot/edge to its corresponding dimension */}
+                          {r0 && (() => {
+                            const step = 20;
+                            const chainY = fm.arrayTopY;
+                            const leftX = fm.arrayLeftX;
+                            const gc = "#7ab4e8";
+                            const gs = { stroke: gc, strokeWidth: 0.4, strokeDasharray: "4 2" };
+                            const nCols = r0.cols.length;
+                            // Total width dim level (outermost horizontal)
+                            const totalWidthLevel = chainY - step * nCols - EXT;
+                            return <>
+                              {/* Vertical at each foot column X — to its outermost cumulative dim */}
+                              {r0.cols.map((col, i) => {
+                                // col 0: only in chain dim; col i>0: cumulative dim at step*i
+                                const topStop = i === 0 ? chainY - EXT : chainY - step * i - EXT;
+                                return <line key={`gvx${i}`} x1={col.x} y1={topStop} x2={col.x} y2={fm.arrayBotY} {...gs} />;
+                              })}
+                              {/* Vertical at module left/right edges — to total width dim */}
+                              {r0.modRects[0] && <line x1={r0.modRects[0].x} y1={totalWidthLevel} x2={r0.modRects[0].x} y2={fm.arrayBotY}
+                                {...gs} strokeWidth={0.3} />}
+                              {(() => { const lr = r0.modRects[r0.modRects.length - 1]; return lr &&
+                                <line x1={lr.x + lr.w} y1={totalWidthLevel} x2={lr.x + lr.w} y2={fm.arrayBotY}
+                                  {...gs} strokeWidth={0.3} />;
+                              })()}
+                              {/* Horizontal at each rail Y — to its outermost cumulative dim */}
+                              {fm.rows.map((row, ri) => {
+                                // cumCol offset: 2 (local dims) + ri*2
+                                const ry1X = leftX - step * (3 + ri * 2) - EXT;
+                                const ry2X = leftX - step * (4 + ri * 2) - EXT;
+                                return (
+                                  <g key={`ghy${ri}`}>
+                                    <line x1={ry1X} y1={row.ry1} x2={fm.arrayRightX} y2={row.ry1} {...gs} />
+                                    <line x1={ry2X} y1={row.ry2} x2={fm.arrayRightX} y2={row.ry2} {...gs} />
+                                  </g>
+                                );
+                              })}
+                            </>;
+                          })()}
+
+                          {/* Foot centers with crosshairs */}
+                          {fm.feet.map((f, i) => (
+                            <g key={`f${i}`}>
+                              <circle cx={f.x} cy={f.y} r={5} fill="#000" />
+                              <line x1={f.x - 8} y1={f.y} x2={f.x + 8} y2={f.y} stroke="#000" strokeWidth={0.4} />
+                              <line x1={f.x} y1={f.y - 8} x2={f.x} y2={f.y + 8} stroke="#000" strokeWidth={0.4} />
+                            </g>
+                          ))}
+
+                          {/* ── Nested horizontal dimensions ABOVE array ── */}
+                          {r0 && r0.cols.length >= 2 && (() => {
+                            const topY = fm.arrayTopY;
+                            const step = 20;
+                            const elems = [];
+
+                            // Row 0 (innermost, closest to array): individual segment chain
+                            const chainY = topY;
+                            elems.push(hDim(r0.modRects[0].x, r0.cols[0].x, chainY, `${fracIn(r0.ovIn)}`, true, ff));
+                            for (let i = 0; i < r0.cols.length - 1; i++) {
+                              elems.push(hDim(r0.cols[i].x, r0.cols[i + 1].x, chainY, `${fracIn(r0.spIn)}`, true, ff));
+                            }
+                            const lastMod = r0.modRects[r0.modRects.length - 1];
+                            elems.push(hDim(r0.cols[r0.cols.length - 1].x, lastMod.x + lastMod.w, chainY, `${fracIn(r0.ovIn)}`, true, ff));
+
+                            // Rows 1..N: cumulative from left edge to each foot (nested outward)
+                            let cumRow = 1;
+                            r0.cols.forEach((col, i) => {
+                              if (i > 0) {
+                                const dist = fm.pxIn(col.x - fm.arrayLeftX);
+                                elems.push(hDim(fm.arrayLeftX, col.x, chainY - step * cumRow, `X: ${fracIn(dist)}`, true, ff));
+                                cumRow++;
+                              }
+                            });
+
+                            // Outermost: total array width
+                            elems.push(hDim(fm.arrayLeftX, fm.arrayRightX, chainY - step * cumRow, `${fracIn(fm.totalWidthIn)}`, true, ff));
+
+                            return elems;
+                          })()}
+
+                          {/* ── Nested vertical dimensions on LEFT side ── */}
+                          {fm.rows.length > 0 && (() => {
+                            const leftX = fm.arrayLeftX;
+                            const topY = fm.arrayTopY;
+                            const step = 20;
+                            const elems = [];
+
+                            // Innermost (closest to array): local per-row dims for first row
+                            const dimX0 = leftX;
+                            elems.push(vDim(r0.y0, r0.ry1, dimX0, `${fracIn(r0.topIn)}`, true, ff));
+                            elems.push(vDim(r0.ry1, r0.ry2, dimX0 - step, `${fracIn(r0.railGapIn)}`, true, ff));
+                            elems.push(vDim(r0.ry2, r0.y0 + r0.modRects[0].h, dimX0, `${fracIn(r0.botIn)}`, true, ff));
+
+                            // Cumulative Y dims: from array top to each row's rail positions
+                            let cumCol = 2; // start after local dims columns
+                            fm.rows.forEach((row, ri) => {
+                              const xOff = leftX - step * (cumCol + 1);
+                              elems.push(vDim(topY, row.ry1, xOff, `Y: ${fracIn(row.cumRy1)}`, true, ff));
+                              elems.push(vDim(topY, row.ry2, xOff - step, `Y: ${fracIn(row.cumRy2)}`, true, ff));
+                              cumCol += 2;
+                            });
+
+                            // Outermost: total array height
+                            elems.push(vDim(fm.arrayTopY, fm.arrayBotY, leftX - step * (cumCol + 1), `${fracIn(fm.totalHeightIn)}`, true, ff));
+
+                            return elems;
+                          })()}
+
+                        </svg>
+
+                        <div style={{ fontFamily: ff, fontSize: 9, color: td, marginTop: 4 }}>
+                          Origin: upper-left corner | Overhang: {fracIn(r0?.ovIn)} | Spacing: {fracIn(r0?.spIn)} | Rail gap: {fracIn(r0?.railGapIn)} | Total: {fracIn(fm.totalWidthIn)} x {fracIn(fm.totalHeightIn)}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>{/* end flex row */}
 
                 {/* ──── Racking Legend ──── */}
                 {rackOv && (
@@ -624,7 +802,7 @@ export default function LayoutTab({
                             <th style={{ textAlign: "left", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>Row</th>
                             <th style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>Mods</th>
                             <th style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>Width</th>
-                            <th style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>Rails</th>
+                            <th style={{ textAlign: "left", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>Rails</th>
                             <th style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>Splices</th>
                             <th style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>Feet</th>
                             <th style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>Mid</th>
@@ -637,8 +815,11 @@ export default function LayoutTab({
                               <td style={{ padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>R{ri + 1}</td>
                               <td style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>{row.count}</td>
                               <td style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>{row.widthIn}"</td>
-                              <td style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>
-                                {row.rails} ({row.segments.map(s => s.stock.len + '"').join("+")})
+                              <td style={{ textAlign: "left", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>
+                                {row.segments.length === 1
+                                  ? <>{row.rails} pcs — 2 runs × 1 pc ({row.segments[0].cutLen}" cut from {row.segments[0].stock.len}" stock)</>
+                                  : <>{row.rails} pcs — 2 runs × {row.segments.length} pcs spliced ({row.segments.map(s => s.cutLen + '"').join(" + ")} per run, from {row.segments.map(s => s.stock.len + '"').join(" + ")} stock)</>
+                                }
                               </td>
                               <td style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>{row.splices || "—"}</td>
                               <td style={{ textAlign: "center", padding: "2px 6px", borderBottom: `1px solid ${bd}` }}>{row.feet}</td>
@@ -648,168 +829,6 @@ export default function LayoutTab({
                           ))}
                         </tbody>
                       </table>
-                    </div>
-                  );
-                })()}
-                {/* ──── Foot Center Locations Map ──── */}
-                {footMap && (() => {
-                  const fm = footMap;
-                  const r0 = fm.rows[0];
-                  const svgId = `foot-map-${g.id}`;
-                  const printFootMap = () => {
-                    const svgEl = document.getElementById(svgId);
-                    if (!svgEl) return;
-                    const w = window.open('', '_blank');
-                    w.document.write(`<!DOCTYPE html><html><head><title>Foot Centers — ${g.nm || 'Face'}</title>
-                      <style>body{margin:20px;text-align:center}svg{max-width:100%;height:auto}
-                      h2{font-family:system-ui;font-size:16px;margin-bottom:12px}</style></head>
-                      <body><h2>FOOT CENTER LOCATIONS — ${g.nm || 'Face'}</h2>${svgEl.outerHTML}</body></html>`);
-                    w.document.close();
-                    setTimeout(() => w.print(), 300);
-                  };
-
-                  return (
-                    <div style={{ marginTop: 10, borderTop: `1px solid ${bd}`, paddingTop: 8 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                        <span style={{ fontFamily: ff, fontSize: 10, color: ac, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                          Foot Center Locations{g.nm ? ` — ${g.nm}` : ""}
-                        </span>
-                        <div style={{ flex: 1 }} />
-                        <button onClick={printFootMap} style={{ ...bt(false), fontSize: 9, padding: "3px 8px" }}>Print</button>
-                      </div>
-
-                      <svg id={svgId} viewBox={`${fm.vb.x} ${fm.vb.y} ${fm.vb.w} ${fm.vb.h}`}
-                        style={{ width: "100%", maxHeight: 400, background: "#fff", borderRadius: 4, border: `1px solid ${bd}` }}>
-                        {/* Module outlines */}
-                        {fm.rows.map((row, ri) =>
-                          row.modRects.map((r, mi) => (
-                            <rect key={`gm${ri}-${mi}`} x={r.x} y={r.y} width={r.w} height={r.h}
-                              fill="#e8f0fe" stroke="#90b4e0" strokeWidth={0.8} rx={1} />
-                          ))
-                        )}
-
-                        {/* Thin rail reference lines */}
-                        {fm.rows.map((row, ri) => (
-                          <g key={`rl${ri}`}>
-                            <line x1={row.rsx} y1={row.ry1} x2={row.rex} y2={row.ry1}
-                              stroke="#bbb" strokeWidth={0.3} />
-                            <line x1={row.rsx} y1={row.ry2} x2={row.rex} y2={row.ry2}
-                              stroke="#bbb" strokeWidth={0.3} />
-                          </g>
-                        ))}
-
-                        {/* Extension lines from each foot/edge to its corresponding dimension */}
-                        {r0 && (() => {
-                          const step = 20;
-                          const chainY = fm.arrayTopY;
-                          const leftX = fm.arrayLeftX;
-                          const gc = "#7ab4e8";
-                          const gs = { stroke: gc, strokeWidth: 0.4, strokeDasharray: "4 2" };
-                          const nCols = r0.cols.length;
-                          // Total width dim level (outermost horizontal)
-                          const totalWidthLevel = chainY - step * nCols - EXT;
-                          return <>
-                            {/* Vertical at each foot column X — to its outermost cumulative dim */}
-                            {r0.cols.map((col, i) => {
-                              // col 0: only in chain dim; col i>0: cumulative dim at step*i
-                              const topStop = i === 0 ? chainY - EXT : chainY - step * i - EXT;
-                              return <line key={`gvx${i}`} x1={col.x} y1={topStop} x2={col.x} y2={fm.arrayBotY} {...gs} />;
-                            })}
-                            {/* Vertical at module left/right edges — to total width dim */}
-                            {r0.modRects[0] && <line x1={r0.modRects[0].x} y1={totalWidthLevel} x2={r0.modRects[0].x} y2={fm.arrayBotY}
-                              {...gs} strokeWidth={0.3} />}
-                            {(() => { const lr = r0.modRects[r0.modRects.length - 1]; return lr &&
-                              <line x1={lr.x + lr.w} y1={totalWidthLevel} x2={lr.x + lr.w} y2={fm.arrayBotY}
-                                {...gs} strokeWidth={0.3} />;
-                            })()}
-                            {/* Horizontal at each rail Y — to its outermost cumulative dim */}
-                            {fm.rows.map((row, ri) => {
-                              // cumCol offset: 2 (local dims) + ri*2
-                              const ry1X = leftX - step * (3 + ri * 2) - EXT;
-                              const ry2X = leftX - step * (4 + ri * 2) - EXT;
-                              return (
-                                <g key={`ghy${ri}`}>
-                                  <line x1={ry1X} y1={row.ry1} x2={fm.arrayRightX} y2={row.ry1} {...gs} />
-                                  <line x1={ry2X} y1={row.ry2} x2={fm.arrayRightX} y2={row.ry2} {...gs} />
-                                </g>
-                              );
-                            })}
-                          </>;
-                        })()}
-
-                        {/* Foot centers with crosshairs */}
-                        {fm.feet.map((f, i) => (
-                          <g key={`f${i}`}>
-                            <circle cx={f.x} cy={f.y} r={5} fill="#000" />
-                            <line x1={f.x - 8} y1={f.y} x2={f.x + 8} y2={f.y} stroke="#000" strokeWidth={0.4} />
-                            <line x1={f.x} y1={f.y - 8} x2={f.x} y2={f.y + 8} stroke="#000" strokeWidth={0.4} />
-                          </g>
-                        ))}
-
-                        {/* ── Nested horizontal dimensions ABOVE array ── */}
-                        {r0 && r0.cols.length >= 2 && (() => {
-                          const topY = fm.arrayTopY;
-                          const step = 20;
-                          const elems = [];
-
-                          // Row 0 (innermost, closest to array): individual segment chain
-                          const chainY = topY;
-                          elems.push(hDim(r0.modRects[0].x, r0.cols[0].x, chainY, `${fracIn(r0.ovIn)}`, true, ff));
-                          for (let i = 0; i < r0.cols.length - 1; i++) {
-                            elems.push(hDim(r0.cols[i].x, r0.cols[i + 1].x, chainY, `${fracIn(r0.spIn)}`, true, ff));
-                          }
-                          const lastMod = r0.modRects[r0.modRects.length - 1];
-                          elems.push(hDim(r0.cols[r0.cols.length - 1].x, lastMod.x + lastMod.w, chainY, `${fracIn(r0.ovIn)}`, true, ff));
-
-                          // Rows 1..N: cumulative from left edge to each foot (nested outward)
-                          let cumRow = 1;
-                          r0.cols.forEach((col, i) => {
-                            if (i > 0) {
-                              const dist = fm.pxIn(col.x - fm.arrayLeftX);
-                              elems.push(hDim(fm.arrayLeftX, col.x, chainY - step * cumRow, `X: ${fracIn(dist)}`, true, ff));
-                              cumRow++;
-                            }
-                          });
-
-                          // Outermost: total array width
-                          elems.push(hDim(fm.arrayLeftX, fm.arrayRightX, chainY - step * cumRow, `${fracIn(fm.totalWidthIn)}`, true, ff));
-
-                          return elems;
-                        })()}
-
-                        {/* ── Nested vertical dimensions on LEFT side ── */}
-                        {fm.rows.length > 0 && (() => {
-                          const leftX = fm.arrayLeftX;
-                          const topY = fm.arrayTopY;
-                          const step = 20;
-                          const elems = [];
-
-                          // Innermost (closest to array): local per-row dims for first row
-                          const dimX0 = leftX;
-                          elems.push(vDim(r0.y0, r0.ry1, dimX0, `${fracIn(r0.topIn)}`, true, ff));
-                          elems.push(vDim(r0.ry1, r0.ry2, dimX0 - step, `${fracIn(r0.railGapIn)}`, true, ff));
-                          elems.push(vDim(r0.ry2, r0.y0 + r0.modRects[0].h, dimX0, `${fracIn(r0.botIn)}`, true, ff));
-
-                          // Cumulative Y dims: from array top to each row's rail positions
-                          let cumCol = 2; // start after local dims columns
-                          fm.rows.forEach((row, ri) => {
-                            const xOff = leftX - step * (cumCol + 1);
-                            elems.push(vDim(topY, row.ry1, xOff, `Y: ${fracIn(row.cumRy1)}`, true, ff));
-                            elems.push(vDim(topY, row.ry2, xOff - step, `Y: ${fracIn(row.cumRy2)}`, true, ff));
-                            cumCol += 2;
-                          });
-
-                          // Outermost: total array height
-                          elems.push(vDim(fm.arrayTopY, fm.arrayBotY, leftX - step * (cumCol + 1), `${fracIn(fm.totalHeightIn)}`, true, ff));
-
-                          return elems;
-                        })()}
-
-                      </svg>
-
-                      <div style={{ fontFamily: ff, fontSize: 9, color: td, marginTop: 4 }}>
-                        Origin: upper-left corner | Overhang: {fracIn(r0?.ovIn)} | Spacing: {fracIn(r0?.spIn)} | Rail gap: {fracIn(r0?.railGapIn)} | Total: {fracIn(fm.totalWidthIn)} x {fracIn(fm.totalHeightIn)}
-                      </div>
                     </div>
                   );
                 })()}
@@ -929,6 +948,7 @@ export default function LayoutTab({
               </table>
             </div>
           )}
+
         </>
       )}
     </div>

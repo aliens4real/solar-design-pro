@@ -6,8 +6,9 @@ const TBS = [
   { id: "electrical", ic: "⚡", lb: "ELECTRICAL" },
   { id: "layout", ic: "◫", lb: "LAYOUT" },
   { id: "plans", ic: "📋", lb: "PLANS" },
-  { id: "photos", ic: "◻", lb: "PHOTOS" },
+  { id: "permitting", ic: "🏛", lb: "PERMITTING" },
   { id: "packlist", ic: "▤", lb: "PACK LIST" },
+  { id: "pricing", ic: "$", lb: "PRICING" },
 ];
 
 export default function TabBar({ tab, setTab }) {
