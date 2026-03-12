@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { callClaude, cleanJson } from '../api/anthropic.js';
 import { lookupJurisdiction } from '../api/jurisdiction.js';
-import { PERMIT_FORMS } from '../data/permit-forms.js';
+import { PERMIT_FORMS, UTILITY_FORMS } from '../data/permit-forms.js';
 import { ff, fs, c1, c2, bg, bd, ac, tx, td, gn, rd, bl, bt, cd, inp, lb } from '../theme.js';
+import PdfFiller from '../components/PdfFiller.jsx';
 
 // ── Reusable helpers ──
 const Lbl = ({ children }) => <label style={lb}>{children}</label>;
@@ -17,6 +18,8 @@ export default function PermittingTab({ pj, pm, uPm, geo, md, iv, sz, dsg, pk, r
   const [reqMsg, setReqMsg] = useState("");
   const [activeForm, setActiveForm] = useState("building");
   const [openLvl, setOpenLvl] = useState({});
+  const [pdfFillerOpen, setPdfFillerOpen] = useState(false);
+  const [pdfFillerForm, setPdfFillerForm] = useState(null);
   const printRef = useRef(null);
 
   // ── Derived ──
@@ -32,6 +35,48 @@ export default function PermittingTab({ pj, pm, uPm, geo, md, iv, sz, dsg, pk, r
   const ocpd = iv?.oc || 30;
   const sysVoc = sz ? (sz.vc * modsPerStr).toFixed(1) : "--";
   const jur = pm.jur;
+
+  // ── Auto-Fill from project data ──
+  const doAutoFill = () => {
+    const fills = {};
+    // Owner = project name, address = site address
+    if (pj.nm && !pm.own) fills.own = pj.nm;
+    if (siteAddr && !pm.ownAd) fills.ownAd = siteAddr;
+    // Main breaker
+    if (pj.es && !pm.pnlBr) fills.pnlBr = `${pj.es}A main breaker`;
+    // Rapid shutdown from inverter type
+    if (iv && !pm.rsd) {
+      if (iv.tp === "micro") fills.rsd = "Module-level shutdown (microinverter)";
+      else if (iv.tp === "optimizer") fills.rsd = "Module-level shutdown (DC optimizer)";
+      else fills.rsd = "Rapid shutdown device required (NEC 690.12)";
+    }
+    // Monitoring from inverter brand
+    if (iv && !pm.monSys) {
+      const n = iv.nm.toLowerCase();
+      if (n.includes("enphase") || n.includes("iq")) fills.monSys = "Enphase Envoy / IQ Gateway";
+      else if (n.includes("solaredge")) fills.monSys = "SolarEdge Monitoring Portal";
+      else if (n.includes("sma")) fills.monSys = "SMA Sunny Portal";
+      else if (n.includes("fronius")) fills.monSys = "Fronius Solar.web";
+      else if (n.includes("sol-ark") || n.includes("solark")) fills.monSys = "Sol-Ark MySolArk Portal";
+      else if (n.includes("tigo")) fills.monSys = "Tigo EI Monitoring";
+      else fills.monSys = `${iv.nm} monitoring`;
+    }
+    // Defaults
+    if (!pm.fedPt) fills.fedPt = "30% ITC (IRC Section 48)";
+    if (!pm.batSz) fills.batSz = "None";
+    // Utility — use matched utility if available, else infer from state
+    if (!pm.util && matchedUtility.length > 0) {
+      const primary = matchedUtility.find(f => f.cat === "interconnect");
+      if (primary) fills.util = primary.ut;
+    }
+    if (!pm.util && !fills.util && jur?.st?.cd === "OH") fills.util = "Ohio Edison / FirstEnergy";
+    if (!pm.util && !fills.util && jur?.st?.cd === "PA") fills.util = "Penn Power / FirstEnergy";
+    // Apply all
+    Object.entries(fills).forEach(([k, v]) => uPm(k, v));
+    return Object.keys(fills).length;
+  };
+
+  const [fillMsg, setFillMsg] = useState("");
 
   // ── Jurisdiction Lookup ──
   const doJurLookup = async () => {
@@ -106,6 +151,185 @@ Include: building permits, electrical permits, zoning requirements, HOA consider
     setTimeout(() => w.print(), 500);
   };
 
+  // ── Form Assist: field definitions by category ──
+  const getFormFields = (cat) => {
+    const f = (section, label, value, status) => ({ section, label, value: value || "", status });
+    const has = (val) => val && val !== "--" && val !== "";
+    const ok = (val) => has(val) ? "ok" : "missing";
+    const verify = (val) => has(val) ? "verify" : "missing";
+
+    if (cat === "building") return [
+      f("Property Information", "Site Address", siteAddr, has(siteAddr) ? "ok" : "missing"),
+      f("Property Information", "Parcel / PIN", pm.pid, ok(pm.pid)),
+      f("Property Information", "Property Owner", pm.own, ok(pm.own)),
+      f("Property Information", "Owner Address", pm.ownAd, ok(pm.ownAd)),
+      f("Property Information", "Owner Phone", pm.ownPh, ok(pm.ownPh)),
+      f("Property Information", "Owner Email", pm.ownEm, ok(pm.ownEm)),
+      f("Contractor", "Company Name", pm.cnm, ok(pm.cnm)),
+      f("Contractor", "License #", pm.clic, ok(pm.clic)),
+      f("Contractor", "Phone", pm.cph, ok(pm.cph)),
+      f("Contractor", "Email", pm.cem, ok(pm.cem)),
+      f("Contractor", "Address", pm.cad, ok(pm.cad)),
+      f("System Specifications", "System Size (DC)", totalKw > 0 ? `${totalKw.toFixed(2)} kW` : "", verify(totalKw > 0 ? "y" : "")),
+      f("System Specifications", "System Size (AC)", acKw > 0 ? `${acKw.toFixed(2)} kW` : "", verify(acKw > 0 ? "y" : "")),
+      f("System Specifications", "Module", md ? `${md.nm} — ${md.w}W` : "", verify(md ? "y" : "")),
+      f("System Specifications", "Module Qty", nMods > 0 ? String(nMods) : "", verify(nMods > 0 ? "y" : "")),
+      f("System Specifications", "Inverter(s)", invSummary !== "--" ? invSummary : "", verify(invSummary !== "--" ? "y" : "")),
+      f("System Specifications", "Mount Type", pj.mt ? (pj.mt === "roof" ? `Roof Mount (${pj.rf})` : pj.mt) : "", verify(pj.mt ? "y" : "")),
+      f("System Specifications", "Est. Annual Production", dsg?.kwh ? `${dsg.kwh.toLocaleString()} kWh` : "", verify(dsg?.kwh ? "y" : "")),
+      f("Structural / Racking", "Racking System", rackSummary !== "Not calculated" ? rackSummary : "", verify(rackSummary !== "Not calculated" ? "y" : "")),
+      f("Structural / Racking", "Roof Type", pj.rf, verify(pj.rf)),
+      f("Structural / Racking", "Roof Pitch", pj.rp ? `${pj.rp}°` : "", verify(pj.rp ? "y" : "")),
+      f("Structural / Racking", "Total Array Weight", md && nMods > 0 ? `${(nMods * (md.wt || 22) * 2.205).toFixed(0)} lbs` : "", verify(md ? "y" : "")),
+      f("Fire Safety", "Rapid Shutdown", pm.rsd || (iv?.tp === "micro" ? "Module-level (microinverter)" : iv?.tp === "optimizer" ? "Module-level (optimizer)" : ""), pm.rsd ? "ok" : iv?.tp ? "verify" : "missing"),
+    ];
+
+    if (cat === "electrical") return [
+      f("Site & Contractor", "Site Address", siteAddr, has(siteAddr) ? "ok" : "missing"),
+      f("Site & Contractor", "Contractor", pm.cnm, ok(pm.cnm)),
+      f("Site & Contractor", "License #", pm.clic, ok(pm.clic)),
+      f("Site & Contractor", "Phone", pm.cph, ok(pm.cph)),
+      f("PV System — NEC 690", "Module", md ? `${md.nm} — ${md.w}W, Voc=${md.voc}V, Isc=${md.isc}A` : "", verify(md ? "y" : "")),
+      f("PV System — NEC 690", "Total Modules", nMods > 0 ? String(nMods) : "", verify(nMods > 0 ? "y" : "")),
+      f("PV System — NEC 690", "System DC Rating", totalKw > 0 ? `${totalKw.toFixed(2)} kW` : "", verify(totalKw > 0 ? "y" : "")),
+      f("PV System — NEC 690", "Inverter(s)", invSummary !== "--" ? invSummary : "", verify(invSummary !== "--" ? "y" : "")),
+      f("PV System — NEC 690", "Inverter AC Rating", acKw > 0 ? `${acKw.toFixed(2)} kW` : "", verify(acKw > 0 ? "y" : "")),
+      f("String Config — NEC 690.7", "Strings", nStr > 0 ? `${nStr} strings x ${modsPerStr} modules` : "", verify(nStr > 0 ? "y" : "")),
+      f("String Config — NEC 690.7", "Max System Voc", sz ? `${sysVoc} V (limit ${iv?.dv || "--"}V)` : "", verify(sz ? "y" : "")),
+      f("String Config — NEC 690.7", "Max String Isc x 1.25", sz ? `${sz.ci?.toFixed(1) || (md.isc * 1.25).toFixed(1)} A` : "", verify(sz ? "y" : "")),
+      f("String Config — NEC 690.7", "OCPD per String", sz ? `${sz.oc} A` : "", verify(sz ? "y" : "")),
+      f("Conductors & Conduit", "PV Source (DC)", sz?.dc ? `${sz.dc} AWG THWN-2, ${sz.dcc || "3/4"}" EMT` : "", verify(sz?.dc ? "y" : "")),
+      f("Conductors & Conduit", "AC Branch", sz?.ac ? `${sz.ac} AWG THWN-2, ${sz.acc || "3/4"}" EMT` : "", verify(sz?.ac ? "y" : "")),
+      f("Conductors & Conduit", "EGC", sz?.eg ? `${sz.eg} AWG Bare Cu` : "", verify(sz?.eg ? "y" : "")),
+      f("Conductors & Conduit", "GEC", sz?.ge ? `${sz.ge} AWG Bare Cu` : "", verify(sz?.ge ? "y" : "")),
+      f("OCPD & Grounding", "DC OCPD", sz?.oc ? `${sz.oc} A fuse/breaker per string` : "", verify(sz?.oc ? "y" : "")),
+      f("OCPD & Grounding", "AC OCPD", `${ocpd} A breaker`, "verify"),
+      f("OCPD & Grounding", "Grounding Electrode", "2x 8ft ground rods, #6 Cu GEC", "verify"),
+      f("NEC 705.12 — Busbar", "Existing Service", `${busbar} A`, pj.es ? "ok" : "missing"),
+      f("NEC 705.12 — Busbar", "120% Allowable", `${rule120.toFixed(0)} A`, "verify"),
+      f("NEC 705.12 — Busbar", "PV Breaker", `${ocpd} A`, "verify"),
+      f("NEC 705.12 — Busbar", "Compliant?", (busbar + ocpd) <= rule120 ? "YES" : "NO — line-side tap required", "verify"),
+      f("Rapid Shutdown", "Compliance Method", pm.rsd || (iv?.tp === "micro" ? "Module-level (microinverter)" : iv?.tp === "optimizer" ? "Module-level (optimizer)" : ""), pm.rsd ? "ok" : iv?.tp ? "verify" : "missing"),
+      f("Rapid Shutdown", "Monitoring System", pm.monSys, ok(pm.monSys)),
+      f("Rapid Shutdown", "Battery Storage", pm.batSz, ok(pm.batSz)),
+    ];
+
+    if (cat === "zoning") return [
+      f("Property Information", "Site Address", siteAddr, has(siteAddr) ? "ok" : "missing"),
+      f("Property Information", "Parcel / PIN", pm.pid, ok(pm.pid)),
+      f("Property Information", "Property Owner", pm.own, ok(pm.own)),
+      f("Property Information", "Owner Phone", pm.ownPh, ok(pm.ownPh)),
+      f("System Overview", "System Size (DC)", totalKw > 0 ? `${totalKw.toFixed(2)} kW` : "", verify(totalKw > 0 ? "y" : "")),
+      f("System Overview", "Module Qty", nMods > 0 ? String(nMods) : "", verify(nMods > 0 ? "y" : "")),
+      f("System Overview", "Mount Type", pj.mt ? (pj.mt === "roof" ? `Roof Mount (${pj.rf})` : pj.mt) : "", verify(pj.mt ? "y" : "")),
+      f("System Overview", "Array Area", md && nMods > 0 ? `${(nMods * (md.lm || 1722) * (md.wm || 1134) / 1e6).toFixed(0)} m\u00B2 (${(nMods * (md.lm || 1722) * (md.wm || 1134) / 929030).toFixed(0)} ft\u00B2)` : "", verify(md ? "y" : "")),
+      f("Setbacks", "Ridge Setback", "3 ft from ridge", "verify"),
+      f("Setbacks", "Eave Setback", "12 in from eave", "verify"),
+      f("Setbacks", "Property Line Setback", "Per local zoning code", "missing"),
+    ];
+
+    if (cat === "interconnect" || cat === "netmeter") return [
+      f("Customer Information", "Customer Name", pm.own, ok(pm.own)),
+      f("Customer Information", "Service Address", siteAddr, has(siteAddr) ? "ok" : "missing"),
+      f("Customer Information", "Mailing Address", pm.ownAd || siteAddr, has(pm.ownAd || siteAddr) ? "ok" : "missing"),
+      f("Customer Information", "Phone", pm.ownPh, ok(pm.ownPh)),
+      f("Customer Information", "Email", pm.ownEm, ok(pm.ownEm)),
+      f("Utility Information", "Utility Provider", pm.util, ok(pm.util)),
+      f("Utility Information", "Account Number", pm.uact, ok(pm.uact)),
+      f("Utility Information", "Meter Number", pm.umtr, ok(pm.umtr)),
+      f("Utility Information", "Existing Service", pj.es ? `${busbar} A, 240V 1-phase` : "", pj.es ? "ok" : "missing"),
+      f("Contractor / Installer", "Company", pm.cnm, ok(pm.cnm)),
+      f("Contractor / Installer", "License #", pm.clic, ok(pm.clic)),
+      f("Contractor / Installer", "Phone", pm.cph, ok(pm.cph)),
+      f("Contractor / Installer", "Email", pm.cem, ok(pm.cem)),
+      f("Generation Facility", "Nameplate DC Rating", totalKw > 0 ? `${totalKw.toFixed(2)} kW` : "", verify(totalKw > 0 ? "y" : "")),
+      f("Generation Facility", "AC Output Rating", acKw > 0 ? `${acKw.toFixed(2)} kW` : "", verify(acKw > 0 ? "y" : "")),
+      f("Generation Facility", "Module", md ? `${md.nm} — ${md.w}W x ${nMods}` : "", verify(md ? "y" : "")),
+      f("Generation Facility", "Inverter", invSummary !== "--" ? invSummary : "", verify(invSummary !== "--" ? "y" : "")),
+      f("Generation Facility", "Est. Annual Production", dsg?.kwh ? `${dsg.kwh.toLocaleString()} kWh` : "", verify(dsg?.kwh ? "y" : "")),
+      f("Interconnection Details", "Point of Interconnection", pm.pnlBr || "Main service panel — load side", pm.pnlBr ? "ok" : "verify"),
+      f("Interconnection Details", "PV Backfeed Breaker", `${ocpd} A`, "verify"),
+      f("Interconnection Details", "NEC 705.12 Compliant", (busbar + ocpd) <= rule120 ? "YES" : "NO", "verify"),
+      f("Interconnection Details", "Anti-Islanding", iv ? `IEEE 1547 — ${iv.nm}` : "", verify(iv ? "y" : "")),
+      f("Interconnection Details", "Interconnection Type", acKw > 0 ? (acKw <= 25 ? "Level 1 — Simplified" : acKw <= 100 ? "Level 2 — Fast Track" : "Level 3 — Study Required") : "", verify(acKw > 0 ? "y" : "")),
+      f("Net Metering", "Federal Tax Credit", pm.fedPt || "30% ITC", pm.fedPt ? "ok" : "verify"),
+      f("Net Metering", "Meter Type", "Bi-directional / net meter", "verify"),
+    ];
+
+    return [];
+  };
+
+  // ── Form Assist: popup window ──
+  const doFormAssist = (form) => {
+    const fields = getFormFields(form.cat);
+    if (fields.length === 0) { window.open(form.url, "_blank"); return; }
+
+    const nOk = fields.filter(r => r.status === "ok").length;
+    const nMiss = fields.filter(r => r.status === "missing").length;
+    const nVer = fields.filter(r => r.status === "verify").length;
+    const sections = [...new Set(fields.map(r => r.section))];
+
+    const sBg = { ok: "#f0fdf4", missing: "#fef2f2", verify: "#fffbeb" };
+    const sBd = { ok: "#bbf7d0", missing: "#fecaca", verify: "#fde68a" };
+    const sTx = { ok: "#166534", missing: "#991b1b", verify: "#92400e" };
+
+    const w = window.open("", "_blank", "width=720,height=820,scrollbars=yes");
+    if (!w) return;
+
+    const safeUrl = (form.url || "").replace(/&/g, "&amp;").replace(/'/g, "&#39;");
+    let h = `<!DOCTYPE html><html><head><title>Form Assistant — ${(form.nm || "").replace(/</g, "&lt;")}</title><style>
+body{font-family:${ff};margin:0;padding:20px;background:#f8fafc;color:#1e293b}
+.hd{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;margin-bottom:16px}
+.hd h2{margin:0 0 4px;font-size:16px} .hd .dept{font-size:11px;color:#64748b} .hd .acts{margin-top:10px;display:flex;gap:8px}
+.btn{padding:6px 14px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer}
+.btn-pdf{background:#2563eb;color:#fff} .btn-pdf:hover{background:#1d4ed8}
+.btn-print{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1} .btn-print:hover{background:#e2e8f0}
+.sum{display:flex;gap:10px;margin-bottom:16px}
+.chip{padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700}
+.sec{background:#fff;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:12px;overflow:hidden}
+.sec h3{font-size:12px;font-weight:700;padding:8px 14px;margin:0;background:#f1f5f9;border-bottom:1px solid #e2e8f0}
+table{width:100%;border-collapse:collapse}
+td{padding:6px 14px;font-size:11px;border-bottom:1px solid #f1f5f9}
+td.lb{font-weight:600;width:40%} .miss td.lb{color:#991b1b;font-weight:700}
+.bdg{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:6px;vertical-align:middle}
+@media print{body{padding:10px} .no-print{display:none!important}}
+</style></head><body>`;
+
+    h += `<div class="hd"><h2>${(form.nm || "").replace(/</g, "&lt;")}</h2>`;
+    h += `<div class="dept">${(form.dept || "").replace(/</g, "&lt;")}${form.ph ? ` — ${form.ph}` : ""}</div>`;
+    h += `<div class="acts no-print"><button class="btn btn-pdf" onclick="window.open('${safeUrl}','_blank')">Open PDF</button>`;
+    h += `<button class="btn btn-print" onclick="window.print()">Print This</button></div></div>`;
+
+    h += `<div class="sum">`;
+    h += `<span class="chip" style="background:${sBg.ok};color:${sTx.ok};border:1px solid ${sBd.ok}">${nOk} filled</span>`;
+    h += `<span class="chip" style="background:${sBg.missing};color:${sTx.missing};border:1px solid ${sBd.missing}">${nMiss} missing</span>`;
+    h += `<span class="chip" style="background:${sBg.verify};color:${sTx.verify};border:1px solid ${sBd.verify}">${nVer} verify</span>`;
+    h += `</div>`;
+
+    sections.forEach(sec => {
+      const rows = fields.filter(r => r.section === sec);
+      h += `<div class="sec"><h3>${sec}</h3><table>`;
+      rows.forEach(r => {
+        const bg = sBg[r.status];
+        const cls = r.status === "missing" ? ' class="miss"' : "";
+        const badge = r.status === "verify" ? `<span class="bdg" style="background:${sBd.verify};color:${sTx.verify}">verify</span>` : "";
+        const val = r.value || '<em style="color:#991b1b">\u2014 required \u2014</em>';
+        h += `<tr${cls} style="background:${bg}"><td class="lb">${r.label}${badge}</td><td>${val}</td></tr>`;
+      });
+      h += `</table></div>`;
+    });
+
+    h += `</body></html>`;
+    w.document.write(h);
+    w.document.close();
+  };
+
+  // ── PDF Fill handler — opens interactive overlay ──
+  const doAutoFillPdf = (form) => {
+    setPdfFillerForm(form);
+    setPdfFillerOpen(true);
+  };
+
   // ── Style helpers ──
   const card = { ...cd, marginBottom: 12 };
   const toolbar = { display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 12 };
@@ -137,6 +361,28 @@ Include: building permits, electrical permits, zoning requirements, HOA consider
     .map(cat => ({ cat, forms: matchedForms.filter(f => f.cat === cat) }))
     .filter(g => g.forms.length > 0);
 
+  // ── Utility Forms matching ──
+  const utCatColors = { interconnect: "#059669", netmeter: "#0891b2", reference: "#6b7280" };
+  const utCatLabels = { interconnect: "Interconnection", netmeter: "Net Metering", reference: "Reference" };
+  const findUtilityForms = (j) => {
+    if (!j?.st) return [];
+    const sc = j.st.cd || j.st.nm;
+    const co = j.co?.nm;
+    return UTILITY_FORMS.filter(f => {
+      if (!ci(sc, f.st) && !ci(f.st, sc)) return false;
+      if (co && f.counties?.length > 0 && !f.counties.some(c => ci(co, c))) return false;
+      return true;
+    });
+  };
+  const matchedUtility = jur ? findUtilityForms(jur) : [];
+  // Group by utility, then by category
+  const utilityGroups = [...new Set(matchedUtility.map(f => f.ut))].map(ut => ({
+    ut,
+    forms: ["interconnect", "netmeter", "reference"]
+      .map(cat => ({ cat, items: matchedUtility.filter(f => f.ut === ut && f.cat === cat) }))
+      .filter(g => g.items.length > 0)
+  }));
+
   // ── Inverter summary ──
   const invSummary = ivs?.length > 0
     ? ivs.map(e => `${e.qty}x ${e.inv.nm} (${e.inv.kw}kW)`).join(", ")
@@ -146,6 +392,29 @@ Include: building permits, electrical permits, zoning requirements, HOA consider
   const rackSummary = rack
     ? `${rack.railFamily || "IronRidge"} — ${rack.totalRailFt?.toFixed(0) || "?"} ft rail, ${rack.totalClamps || "?"} clamps, ${rack.totalMounts || "?"} mounts`
     : "Not calculated";
+
+  // ── Project data for PdfFiller ──
+  const projectData = useMemo(() => ({
+    siteAddress: siteAddr,
+    propertyOwner: pm.own, ownerAddress: pm.ownAd, ownerPhone: pm.ownPh, ownerEmail: pm.ownEm,
+    parcelId: pm.pid,
+    contractor: "Canopy Solar", contractorLicense: pm.clic, contractorPhone: pm.cph, contractorEmail: pm.cem, contractorAddress: pm.cad,
+    systemSizeDC: totalKw > 0 ? `${totalKw.toFixed(2)} kW` : "",
+    systemSizeAC: acKw > 0 ? `${acKw.toFixed(2)} kW` : "",
+    module: md ? `${md.nm} — ${md.w}W` : "",
+    moduleQty: nMods > 0 ? String(nMods) : "",
+    inverter: invSummary !== "--" ? invSummary : "",
+    mountType: pj.mt === "roof" ? `Roof Mount (${pj.rf})` : pj.mt || "",
+    roofType: pj.rf || "", roofPitch: pj.rp ? `${pj.rp} degrees` : "",
+    annualProduction: dsg?.kwh ? `${dsg.kwh.toLocaleString()} kWh` : "",
+    existingService: pj.es ? `${busbar} A` : "",
+    rapidShutdown: pm.rsd || "",
+    monitoringSystem: pm.monSys || "",
+    batteryStorage: pm.batSz || "None",
+    utility: pm.util || "", utilityAccount: pm.uact || "", meterNumber: pm.umtr || "",
+    jurisdiction: jur?.co?.nm ? `${jur.co.nm} County, ${jur.st?.nm || ""}` : "",
+    city: pj.ct || "", state: pj.st || "", zip: pj.zp || "",
+  }), [siteAddr, pm, totalKw, acKw, md, nMods, invSummary, pj, dsg, busbar, jur]);
 
   // ═══════════════════════════════════════════
   // BUILDING PERMIT FORM
@@ -376,6 +645,9 @@ Include: building permits, electrical permits, zoning requirements, HOA consider
         <button style={bt(false)} onClick={doReqLookup} disabled={reqBusy || !jur?.st}>
           {reqBusy ? "Researching..." : "AI Permit Lookup"}
         </button>
+        <button style={bt(false)} onClick={() => { const n = doAutoFill(); setFillMsg(n > 0 ? `Filled ${n} fields` : "All fields already set"); setTimeout(() => setFillMsg(""), 3000); }}>
+          Auto-Fill
+        </button>
         <span style={{ flex: 1 }} />
         {["building", "electrical", "interconnect"].map(f => (
           <button key={f} style={bt(activeForm === f)} onClick={() => setActiveForm(f)}>
@@ -388,6 +660,7 @@ Include: building permits, electrical permits, zoning requirements, HOA consider
       {/* Status messages */}
       {jurMsg && <div style={{ fontSize: 11, color: td, marginBottom: 8 }}>{jurMsg}</div>}
       {reqMsg && <div style={{ fontSize: 11, color: td, marginBottom: 8 }}>{reqMsg}</div>}
+      {fillMsg && <div style={{ fontSize: 11, color: gn, marginBottom: 8 }}>{fillMsg}</div>}
 
       {/* ── [B] Jurisdiction Hierarchy ── */}
       {jur && (
@@ -420,14 +693,58 @@ Include: building permits, electrical permits, zoning requirements, HOA consider
                 <span style={{ fontSize: 9, fontWeight: 700, color: "#fff", background: catColors[cat], padding: "1px 8px", borderRadius: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>{catLabels[cat]}</span>
               </div>
               {forms.map((f, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "4px 0", borderBottom: i < forms.length - 1 ? `1px solid ${c2}` : "none" }}>
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", borderBottom: i < forms.length - 1 ? `1px solid ${c2}` : "none" }}>
                   <span style={{ fontSize: 13, flexShrink: 0 }}>&#128196;</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <a href={f.url} target="_blank" rel="noopener noreferrer" style={{ color: bl, fontSize: 12, fontWeight: 600, textDecoration: "none" }}>{f.nm}</a>
+                    <a href={f.url} target="_blank" rel="noopener noreferrer" onClick={e => { if (cat !== "reference") { e.preventDefault(); doFormAssist(f); } }} style={{ color: bl, fontSize: 12, fontWeight: 600, textDecoration: "none" }}>{f.nm}</a>
                     <div style={{ fontSize: 10, color: td }}>
                       {f.dept}{f.ph ? ` — ${f.ph}` : ""}
                     </div>
                   </div>
+                  {cat !== "reference" && f.url?.toLowerCase().endsWith(".pdf") && (
+                    <button
+                      onClick={() => doAutoFillPdf(f)}
+                      style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 6, border: "none", background: gn, color: "#fff", cursor: "pointer" }}
+                    >
+                      Fill PDF
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── [B3] Utility Interconnection Forms ── */}
+      {utilityGroups.length > 0 && (
+        <div style={card}>
+          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Utility Interconnection Forms</div>
+          {utilityGroups.map(({ ut, forms }) => (
+            <div key={ut} style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: tx, marginBottom: 4 }}>{ut}</div>
+              {forms.map(({ cat, items }) => (
+                <div key={cat} style={{ marginBottom: 6 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: "#fff", background: utCatColors[cat], padding: "1px 8px", borderRadius: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>{utCatLabels[cat]}</span>
+                  {items.map((f, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", borderBottom: i < items.length - 1 ? `1px solid ${c2}` : "none" }}>
+                      <span style={{ fontSize: 13, flexShrink: 0 }}>&#9889;</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <a href={f.url} target="_blank" rel="noopener noreferrer" onClick={e => { if (cat !== "reference") { e.preventDefault(); doFormAssist(f); } }} style={{ color: bl, fontSize: 12, fontWeight: 600, textDecoration: "none" }}>{f.nm}</a>
+                        <div style={{ fontSize: 10, color: td }}>
+                          {f.dept}{f.ph ? ` — ${f.ph}` : ""}{f.em ? ` — ${f.em}` : ""}
+                        </div>
+                      </div>
+                      {cat !== "reference" && f.url?.toLowerCase().endsWith(".pdf") && (
+                        <button
+                          onClick={() => doAutoFillPdf(f)}
+                          style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 6, border: "none", background: gn, color: "#fff", cursor: "pointer" }}
+                        >
+                          Fill PDF
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -515,6 +832,15 @@ Include: building permits, electrical permits, zoning requirements, HOA consider
         {activeForm === "electrical" && <ElectricalForm />}
         {activeForm === "interconnect" && <InterconnectForm />}
       </div>
+
+      {/* ── PDF Filler Overlay ── */}
+      {pdfFillerOpen && pdfFillerForm && (
+        <PdfFiller
+          form={pdfFillerForm}
+          projectData={projectData}
+          onClose={() => { setPdfFillerOpen(false); setPdfFillerForm(null); }}
+        />
+      )}
     </div>
   );
 }
