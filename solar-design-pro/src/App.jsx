@@ -17,7 +17,7 @@ import { callClaude, cleanJson } from './api/anthropic.js';
 import { geocodeAddr, lookupClimateData } from './api/climate.js';
 
 // ── Hooks ──
-import { useAddress } from './hooks/useAddress.js';
+// useAddress hook available but not currently used (manual address entry preferred)
 
 // ── Theme ──
 import { ff, fs, bg, c1, c2, bd, ac, tx, td, gn, rd, bl, inp, lb, cd, bt } from './theme.js';
@@ -108,12 +108,7 @@ export default function App() {
   const climRan = useRef(false);
   const u = (k, v) => sPj(p => ({ ...p, [k]: v }));
 
-  // ── Address Autocomplete ──
   const lookupClimateRef = useRef(null);
-  const onAddrPick = useCallback((addr) => {
-    setTimeout(() => lookupClimateRef.current({ ...pj, ...addr }), 0);
-  }, [pj]);
-  const { addrQ, addrSug, addrOpen, addrLoading, addrRect, addrHi, addrRef, addrInpRef, searchAddr, pickAddr, setAddrOpen, updateRect, addrKey } = useAddress(sPj, setGeo, climRan, onAddrPick);
 
   // ── Derived ──
   const md = MODS.find(x => x.id === pj.mi), iv = INVS.find(x => x.id === pj.ii);
@@ -640,9 +635,6 @@ RULES:
           invRec={invRec} setInvRec={setInvRec} recommendInverter={recommendInverter}
           ivList={ivList} addIv={addIv} updIv={updIv} delIv={delIv} ivs={ivs} totalIvKw={totalIvKw} pickIv={pickIv} calcOptQty={calcOptQty}
           setTab={setTab} chat={chat}
-          addrQ={addrQ} addrSug={addrSug} addrOpen={addrOpen} addrLoading={addrLoading} addrRect={addrRect} addrHi={addrHi}
-          addrRef={addrRef} addrInpRef={addrInpRef} searchAddr={searchAddr} pickAddr={pickAddr}
-          setAddrOpen={setAddrOpen} updateRect={updateRect} addrKey={addrKey}
           jobs={jobs} activeJobId={activeJobId} onNewJob={newJob} onLoadJob={loadJob} onDeleteJob={deleteJob}
           uPm={uPm}
         />}

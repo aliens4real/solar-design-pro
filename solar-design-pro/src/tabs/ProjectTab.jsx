@@ -14,8 +14,7 @@ export default function ProjectTab({
   pj, u, md, iv, sz, totalMods, totalKw, modGroups, addGroup, updGroup, delGroup,
   climBusy, climMsg, lookupClimate, climRan, invRec, setInvRec, recommendInverter,
   ivList, addIv, updIv, delIv, ivs, totalIvKw, pickIv, calcOptQty,
-  setTab, chat, addrQ, addrSug, addrOpen, addrLoading, addrRect, addrHi, addrRef, addrInpRef,
-  searchAddr, pickAddr, setAddrOpen, updateRect, addrKey,
+  setTab, chat,
   jobs, activeJobId, onNewJob, onLoadJob, onDeleteJob,
   uPm
 }) {
@@ -139,27 +138,23 @@ Then under **Recommendations**, explain which fields in our solar design tool th
             <label style={lb}>Project Name</label>
             <input style={inp} value={pj.nm} onChange={e => u("nm", e.target.value)} placeholder="Customer name or project ID" />
           </div>
-          <div ref={addrRef} style={{ position: "relative" }}>
-            <label style={lb}>Address</label>
-            <input ref={addrInpRef} style={inp} value={addrQ !== undefined ? addrQ : (pj.ad ? `${pj.ad}, ${pj.ct || ""}, ${pj.st || ""} ${pj.zp || ""}`.replace(/,\s*,/g, ",").trim() : "")}
-              onChange={e => { searchAddr(e.target.value); updateRect(); }}
-              onFocus={() => { if (addrSug.length > 0) { setAddrOpen(true); updateRect(); } }}
-              onKeyDown={addrKey}
-              placeholder="123 Main St, City, State…"
-              autoComplete="off" />
-            {addrLoading && <div style={{ position: "absolute", right: 10, top: 26, fontSize: 10, color: td, fontFamily: ff }}>…</div>}
-            {addrOpen && addrSug.length > 0 && (
-              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 9999, background: c1, border: `1px solid ${bd}`, borderTop: `2px solid ${ac}`, borderRadius: "0 0 8px 8px", maxHeight: 220, overflow: "auto", boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
-                {addrSug.map((s, i) => (
-                  <div key={i} style={{ padding: "8px 12px", fontSize: 11, fontFamily: ff, cursor: "pointer", borderBottom: `1px solid ${bd}`, background: i === addrHi ? c2 : "transparent", transition: "background 0.1s" }}
-                    onMouseEnter={() => {}}
-                    onMouseDown={e => { e.preventDefault(); pickAddr(s); }}>
-                    <div style={{ color: ac, fontWeight: 600 }}>{s.road}</div>
-                    <div style={{ color: td, fontSize: 10 }}>{s.city}, {s.state} {s.zip}</div>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div>
+            <label style={lb}>Street Address</label>
+            <input style={inp} value={pj.ad || ""} onChange={e => u("ad", e.target.value)} placeholder="123 Main St" />
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10, marginTop: 10 }}>
+          <div>
+            <label style={lb}>City</label>
+            <input style={inp} value={pj.ct || ""} onChange={e => u("ct", e.target.value)} placeholder="City" />
+          </div>
+          <div>
+            <label style={lb}>State</label>
+            <input style={inp} value={pj.st || ""} onChange={e => u("st", e.target.value)} placeholder="OH" maxLength={2} />
+          </div>
+          <div>
+            <label style={lb}>Zip</label>
+            <input style={inp} value={pj.zp || ""} onChange={e => u("zp", e.target.value)} placeholder="44101" maxLength={10} />
           </div>
         </div>
       </div>
