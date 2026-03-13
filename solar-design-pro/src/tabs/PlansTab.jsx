@@ -17,6 +17,7 @@ export default function PlansTab({ md, iv, sz, pj, dsg, pk, totalMods, totalKw, 
   const [manBusy, setManBusy] = useState(false);
   const [manErr, setManErr] = useState("");
   const manualRef = useRef(null);
+  const commRef = useRef(null);
 
   /* ═══ COMPUTED VALUES ═══ */
   const ready = md && iv && sz;
@@ -182,6 +183,50 @@ Phases should be: 1-Site Prep, 2-Material Staging, 3-Roof Prep/Layout, 4-Racking
     setTimeout(() => { w.print(); }, 500);
   };
 
+  const doPrintComm = () => {
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document.write(`<!DOCTYPE html><html><head><title>${pj.nm || "Solar"} — Commissioning Packet</title><style>
+      @media print { @page { size: letter; margin: 0.5in; } body { margin: 0; } .plan-page { page-break-after: always; break-after: page; } .plan-page:last-child { page-break-after: auto; break-after: auto; } }
+      body { font-family: ${ff}; margin: 0; padding: 0; }
+      .plan-page { padding: 36px 44px; font-size: 13px; line-height: 1.7; }
+      table { border-collapse: collapse; width: 100%; font-size: 12px; }
+      th { padding: 7px 10px; background: #e8e8e8; border: 1px solid #bbb; font-weight: 700; text-align: left; font-size: 11px; }
+      td { padding: 6px 10px; border: 1px solid #ccc; }
+    </style></head><body>`);
+    const pages = commRef.current?.querySelectorAll(".plan-page");
+    if (pages) pages.forEach(p => w.document.write(p.outerHTML));
+    w.document.write("</body></html>");
+    w.document.close();
+    setTimeout(() => { w.print(); }, 500);
+  };
+
+  /* ═══ COMMISSIONING DATA ═══ */
+  const isMicro = iv?.tp === "micro";
+  const isOptimizer = iv?.tp === "optimizer";
+  const isHybrid = iv?.tp === "hybrid";
+  const isString = iv?.tp === "string";
+  const brand = iv?.nm?.split(" ")[0] || "";
+  const isEnphase = brand === "Enphase";
+  const isSolarEdge = brand === "SolarEdge";
+  const isSMA = brand === "SMA";
+  const isFronius = brand === "Fronius";
+  const isSolArk = iv?.nm?.includes("Sol-Ark");
+  const isTigo = brand === "Tigo";
+
+  // Expected per-string values
+  const expVoc = sz ? (sz.vc * modsPerStr).toFixed(1) : "—";
+  const expVmp = sz ? ((md?.vmp || 0) * modsPerStr).toFixed(1) : "—";
+  const expIsc = md?.isc ? md.isc.toFixed(2) : "—";
+  const expImp = md?.imp ? md.imp.toFixed(2) : "—";
+
+  // Build string rows for testing table
+  const stringTestRows = [];
+  for (let s = 1; s <= nStr; s++) {
+    const mpptNum = iv?.mppt > 1 ? Math.ceil(s / Math.ceil(nStr / iv.mppt)) : 1;
+    stringTestRows.push({ str: s, mppt: mpptNum, mods: modsPerStr });
+  }
+
   /* ═══ RENDER ═══ */
   return (
     <div style={{ maxWidth: 920, margin: "0 auto" }} className="fi">
@@ -198,6 +243,7 @@ Phases should be: 1-Site Prep, 2-Material Staging, 3-Roof Prep/Layout, 4-Racking
           {manBusy ? "Generating..." : "Generate Install Manual"}
         </button>
         {manual && <button style={{ ...bt(false), fontSize: 11 }} onClick={doPrintManual}>Print Manual</button>}
+        {ready && <button style={{ ...bt(false), fontSize: 11 }} onClick={doPrintComm}>Print Commissioning</button>}
         <button style={{ ...bt(true), fontSize: 11 }} onClick={doPrint}>Print / Save PDF</button>
       </div>
 
@@ -919,6 +965,578 @@ Phases should be: 1-Site Prep, 2-Material Staging, 3-Roof Prep/Layout, 4-Racking
               </div>
             </div>
           )}
+        </div>
+      )}
+      {/* ═══ COMMISSIONING PACKET ═══ */}
+      {ready && (
+        <div ref={commRef} style={{ marginTop: 14 }}>
+
+          {/* ──── COMM PAGE 1 — PRE-ENERGIZATION INSPECTION ──── */}
+          <div className="plan-page" style={pg}>
+            {hdr("Commissioning Packet", "Pre-Energization Inspection")}
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6 }}>SYSTEM INFORMATION</div>
+            <table style={tbl}><tbody>
+              <tr><td style={th}>Project</td><td style={tcell}>{pj.nm || "—"}</td><td style={th}>Date</td><td style={tcell}>_______________</td></tr>
+              <tr><td style={th}>Address</td><td style={tcell} colSpan={3}>{[pj.ad, pj.ct, pj.st, pj.zp].filter(Boolean).join(", ") || "—"}</td></tr>
+              <tr><td style={th}>System Size</td><td style={tcR}>{arrayKw.toFixed(2)} kW DC</td><td style={th}>Inverter</td><td style={tcell}>{iv?.nm} ({iv?.tp})</td></tr>
+              <tr><td style={th}>Modules</td><td style={tcell}>{nMods}x {md?.nm}</td><td style={th}>Strings</td><td style={tcR}>{nStr}S x {modsPerStr}M</td></tr>
+              <tr><td style={th}>Mount Type</td><td style={tcell}>{pj.mt || "roof"}</td><td style={th}>Service</td><td style={tcR}>{pj.es || 200}A</td></tr>
+              <tr><td style={th}>Inspector</td><td style={tcell}>_______________</td><td style={th}>Weather</td><td style={tcell}>_______________</td></tr>
+            </tbody></table>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 18 }}>VISUAL INSPECTION — MECHANICAL</div>
+            <table style={tbl}>
+              <thead><tr><th style={{ ...th, width: 30 }}>{"\u2610"}</th><th style={th}>Check Item</th><th style={th}>Notes / Findings</th></tr></thead>
+              <tbody>
+                {[
+                  "All modules mounted securely — no cracked glass, damaged frames, or loose clamps",
+                  "Module nameplates visible and legible on all modules",
+                  `Racking torqued to manufacturer spec (mid clamps, end clamps, L-feet / ${pj.mt === "ground" ? "pier" : "roof"} attachments)`,
+                  pj.mt !== "ground" ? "All roof penetrations properly sealed/flashed — no exposed fasteners" : "Ground mount foundations level, plumb, and set to spec",
+                  pj.mt !== "ground" ? "Fire code setbacks maintained (3ft ridge, 18\" eave per IFC/local)" : "Array clear of vegetation and drainage paths",
+                  "All conduit runs complete — straps within 3ft of boxes, every 10ft per NEC 358.30",
+                  "Conduit fittings tight — connectors, LBs, couplings, no open knockouts",
+                  "Junction boxes / combiner box covers installed, NEMA rating appropriate for location",
+                  "All wire management complete — zip ties, cable clips, no hanging wires",
+                  "Inverter mounted plumb, clearances per manufacturer (ventilation space)",
+                  "DC disconnect / rapid shutdown device installed and accessible",
+                  "AC disconnect installed (if required by AHJ)",
+                ].map((item, i) => (
+                  <tr key={i}><td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td><td style={tcell}>{item}</td><td style={tcell}></td></tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 18 }}>VISUAL INSPECTION — ELECTRICAL</div>
+            <table style={tbl}>
+              <thead><tr><th style={{ ...th, width: 30 }}>{"\u2610"}</th><th style={th}>Check Item</th><th style={th}>Notes / Findings</th></tr></thead>
+              <tbody>
+                {[
+                  "All MC4 connectors fully engaged and latched (pull test each connection)",
+                  isMicro ? "All microinverter trunk cable connections secure and weatherproofed" : "Home run wiring landed correctly at inverter / combiner DC inputs",
+                  "Wire gauge matches plan — PV source: #" + (sz?.dc || "10") + ", AC branch: #" + (sz?.ac || "10"),
+                  `EGC (#${sz?.egc || "10"} Cu) continuous from array to inverter to panel`,
+                  `GEC (#${sz?.gec || "6"} Cu) connected from panel to grounding electrode`,
+                  "Ground rod(s) driven to code depth — clamp(s) tight",
+                  "Bonding bushing installed at service panel",
+                  "All wire terminations torqued to spec (use calibrated torque driver)",
+                  isOptimizer ? "All optimizer-to-module DC connections verified" : isMicro ? "Microinverter under each module connected and clipped to rail" : "String home runs labeled at both ends",
+                  "No exposed copper at any junction or termination",
+                ].map((item, i) => (
+                  <tr key={i}><td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td><td style={tcell}>{item}</td><td style={tcell}></td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ──── COMM PAGE 2 — DC STRING TESTING ──── */}
+          <div className="plan-page" style={pg}>
+            {hdr("Commissioning Packet", "DC String Testing — Pre-Inverter Energization")}
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6 }}>EXPECTED VALUES (from design)</div>
+            <table style={tbl}><tbody>
+              <tr><td style={th}>Voc per string (cold-corrected)</td><td style={tcR}>{expVoc} V</td><td style={th}>Max inverter DC input</td><td style={tcR}>{iv?.dv || "—"} V</td></tr>
+              <tr><td style={th}>Isc per string</td><td style={tcR}>{expIsc} A</td><td style={th}>Modules per string</td><td style={tcR}>{modsPerStr}</td></tr>
+              <tr><td style={th}>Vmp per string (STC)</td><td style={tcR}>{expVmp} V</td><td style={th}>MPPT window</td><td style={tcR}>{iv?.ml || "—"}–{iv?.mh || "—"} V</td></tr>
+            </tbody></table>
+
+            <div style={{ padding: "6px 10px", background: "#fffbeb", border: "1px solid #f59e0b", borderRadius: 4, fontSize: 10, color: "#92400e", marginTop: 10, marginBottom: 10, lineHeight: 1.5 }}>
+              <strong>Acceptance criteria:</strong> Measured Voc within {"\u00b1"}5% of expected. Strings in same orientation should read within {"\u00b1"}2% of each other.
+              Isc varies with irradiance — compare ratios between strings rather than absolute values. All polarity must be correct (positive to positive).
+            </div>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 14 }}>
+              {isMicro ? "PER-BRANCH CIRCUIT TESTING" : "PER-STRING OPEN CIRCUIT VOLTAGE & SHORT CIRCUIT CURRENT"}
+            </div>
+            <table style={tbl}>
+              <thead><tr>
+                <th style={th}>{isMicro ? "Branch" : "String"}</th>
+                <th style={th}>{isMicro ? "Micros" : "MPPT"}</th>
+                <th style={th}>Modules</th>
+                <th style={th}>Exp. Voc</th>
+                <th style={th}>Meas. Voc</th>
+                <th style={th}>{isMicro ? "—" : "Exp. Isc"}</th>
+                <th style={th}>{isMicro ? "—" : "Meas. Isc"}</th>
+                <th style={{ ...th, width: 30 }}>Pol.</th>
+                <th style={th}>Pass</th>
+              </tr></thead>
+              <tbody>
+                {isMicro ? (
+                  // For micros, show per-branch rows (1 branch per ~15 micros on a 20A circuit)
+                  Array.from({ length: Math.ceil(nMods / 15) || 1 }, (_, i) => {
+                    const cnt = Math.min(15, nMods - i * 15);
+                    return (
+                      <tr key={i}>
+                        <td style={tcell}>Branch {i + 1}</td>
+                        <td style={tcR}>{cnt}</td>
+                        <td style={tcR}>{cnt}</td>
+                        <td style={tcR}>~240 VAC</td>
+                        <td style={tcell}></td>
+                        <td style={tcell}>—</td>
+                        <td style={tcell}>—</td>
+                        <td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td>
+                        <td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  stringTestRows.map(r => (
+                    <tr key={r.str}>
+                      <td style={tcell}>String {r.str}</td>
+                      <td style={tcR}>MPPT {r.mppt}</td>
+                      <td style={tcR}>{r.mods}</td>
+                      <td style={tcR}>{expVoc} V</td>
+                      <td style={tcell}></td>
+                      <td style={tcR}>{expIsc} A</td>
+                      <td style={tcell}></td>
+                      <td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td>
+                      <td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+
+            {!isMicro && <>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 18 }}>INSULATION RESISTANCE TEST (MEGGER)</div>
+              <div style={{ padding: "6px 10px", background: "#f0f9ff", border: "1px solid #93c5fd", borderRadius: 4, fontSize: 10, color: "#1e40af", marginBottom: 8, lineHeight: 1.5 }}>
+                Test at 500V or 1000V DC between: (1) positive conductor to ground, (2) negative conductor to ground, (3) positive to negative (strings isolated).
+                Minimum acceptable reading: 1 M{"\u2126"} per string (IEC 62446). Record readings below.
+              </div>
+              <table style={tbl}>
+                <thead><tr>
+                  <th style={th}>String</th><th style={th}>+ to GND (M{"\u2126"})</th><th style={th}>- to GND (M{"\u2126"})</th><th style={th}>+ to - (M{"\u2126"})</th><th style={th}>Pass</th>
+                </tr></thead>
+                <tbody>
+                  {stringTestRows.map(r => (
+                    <tr key={r.str}>
+                      <td style={tcell}>String {r.str}</td>
+                      <td style={tcell}></td>
+                      <td style={tcell}></td>
+                      <td style={tcell}></td>
+                      <td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>}
+          </div>
+
+          {/* ──── COMM PAGE 3 — INVERTER COMMISSIONING ──── */}
+          <div className="plan-page" style={pg}>
+            {hdr("Commissioning Packet", `Inverter Commissioning — ${iv?.nm || "Inverter"}`)}
+
+            {/* ── PRE-ENERGIZATION CHECKS ── */}
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6 }}>PRE-ENERGIZATION CHECKS</div>
+            <table style={tbl}>
+              <thead><tr><th style={{ ...th, width: 30 }}>{"\u2610"}</th><th style={th}>Check</th><th style={th}>Details / Reading</th></tr></thead>
+              <tbody>
+                {[
+                  `Confirm inverter nameplate: ${iv?.nm}, ${iv?.kw}kW, ${iv?.dv}V max DC`,
+                  ...(isEnphase ? [
+                    "No DC disconnect required — module-level AC conversion",
+                    "Verify AC disconnect is OFF at service panel",
+                    "All Q-Cable trunk connectors fully clicked; sealing caps on unused ports",
+                    `IQ Gateway connected to router via Ethernet or WiFi (2.4GHz only)`,
+                  ] : isSolarEdge ? [
+                    "Verify DC disconnect is OFF",
+                    "Verify AC breaker is OFF at main panel",
+                    "All DC/AC terminals torqued to spec",
+                    `Verify clearances: 8″ horizontal, 4″ vertical, 16″ front ventilation`,
+                    `Check all ${nMods} optimizer LEDs — each should flash green (DC present)`,
+                  ] : isSMA ? [
+                    "Verify DC disconnect is OFF",
+                    "Verify AC breaker is OFF at main panel",
+                    "All DC/AC terminals torqued to spec",
+                    "Verify clearances: 12″ sides, 36″ from ground, vertical mount only",
+                    "WiFi: Confirm 2.4GHz network available (SMA does not support 5GHz)",
+                  ] : isFronius ? [
+                    "Verify DC disconnect is OFF",
+                    "Verify AC breaker is OFF at main panel",
+                    "DC terminals torqued to 1.3–1.5 Nm (TX20 driver)",
+                    "AC union nut torqued to 6–7 Nm",
+                    "Verify clearances: 2m from ventilation openings; mount bracket at 4 points, arrow up",
+                    "CRITICAL: Verify external RSD device installed (Fronius RSD Box Quattro or Duo)",
+                  ] : isSolArk ? [
+                    "Verify ALL switches OFF: battery, PV DC, grid breaker, load/gen breakers",
+                    "No impact drivers used on any inverter fasteners",
+                    "Battery cells balanced within 0.5V; polarity triple-checked (DO NOT reverse)",
+                    "CTs installed: dual 30A on L1/L2, CT wires twisted, extended w/ CAT6 shielded only",
+                    "Verify clearances: 6″ top, 2″ sides minimum",
+                    "Battery actuation levers at max 45° angle",
+                  ] : isTigo ? [
+                    "Verify BAT switch OFF, inverter DC switch OFF, grid disconnect OFF, PV DC OFF",
+                    "All DC/AC terminals torqued to spec",
+                    "Verify clearances: 12″ (300mm) on all sides",
+                    "All TS4 MLPE units connected and seated on module junction boxes",
+                    `Max DC input: 600V — verify string design is within limit`,
+                  ] : [
+                    "Verify DC disconnect is OFF",
+                    "Verify AC breaker is OFF at main panel",
+                    "All DC/AC terminals torqued to spec",
+                  ]),
+                  "Equipment grounding conductor (EGC) connected to ground/bonding lug",
+                ].map((item, i) => (
+                  <tr key={i}><td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td><td style={tcell}>{item}</td><td style={tcell}></td></tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* ── STARTUP & COMMISSIONING SEQUENCE ── */}
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 18 }}>STARTUP & COMMISSIONING SEQUENCE</div>
+            {isSMA && <div style={{ padding: "5px 10px", background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 4, fontSize: 10, color: "#166534", marginBottom: 8, lineHeight: 1.5 }}>
+              <strong>SMA Sunny Boy SE:</strong> DC switch ON first → AC breaker ON last. Shutdown: AC first off, DC last off. Grid country standard locks after 10 hours of feed-in (need Grid Guard code to change after).
+            </div>}
+            {isSolarEdge && <div style={{ padding: "5px 10px", background: "#eff6ff", border: "1px solid #93c5fd", borderRadius: 4, fontSize: 10, color: "#1e40af", marginBottom: 8, lineHeight: 1.5 }}>
+              <strong>SolarEdge:</strong> AC breaker ON first → DC switch ON second (opposite of most string inverters!). Each optimizer outputs safe 1V when unpaired or shutdown.
+            </div>}
+            {isFronius && <div style={{ padding: "5px 10px", background: "#fefce8", border: "1px solid #fde047", borderRadius: 4, fontSize: 10, color: "#854d0e", marginBottom: 8, lineHeight: 1.5 }}>
+              <strong>Fronius GEN24:</strong> DC disconnect ON first → AC breaker ON second. 2 independent MPPTs, 4 string inputs (2 per MPPT). Requires EXTERNAL rapid shutdown hardware.
+            </div>}
+            {isSolArk && <div style={{ padding: "5px 10px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 4, fontSize: 10, color: "#991b1b", marginBottom: 8, lineHeight: 1.5 }}>
+              <strong>Sol-Ark Hybrid:</strong> 5-step startup order is critical. Defaults to 120/240V split-phase 60Hz. Contact Sol-Ark (972-575-8875) for firmware updates.
+            </div>}
+            {isTigo && <div style={{ padding: "5px 10px", background: "#f5f3ff", border: "1px solid #c4b5fd", borderRadius: 4, fontSize: 10, color: "#5b21b6", marginBottom: 8, lineHeight: 1.5 }}>
+              <strong>Tigo EI:</strong> 4-step startup order. Bluetooth commissioning takes &lt;10 min (no internet needed initially). TS4 MLPE uses PLC signal for rapid shutdown.
+            </div>}
+            {isEnphase && <div style={{ padding: "5px 10px", background: "#fdf4ff", border: "1px solid #e879f9", borderRadius: 4, fontSize: 10, color: "#86198f", marginBottom: 8, lineHeight: 1.5 }}>
+              <strong>Enphase IQ8:</strong> Grid profile MUST be applied before micros will produce. Use Installer Toolkit app (NOT the homeowner Enphase App). Scan barcodes — do NOT use gateway PLC button for IQ8.
+            </div>}
+            <table style={tbl}>
+              <thead><tr><th style={{ ...th, width: 30 }}>Order</th><th style={th}>Step</th><th style={{ ...th, width: 30 }}>{"\u2610"}</th></tr></thead>
+              <tbody>
+                {(isEnphase ? [
+                  "Power on IQ Gateway — wait 2–3 min for boot (LEDs flash amber/red during boot)",
+                  "Open Enphase Installer Toolkit app → scan each microinverter barcode",
+                  `Verify gateway discovers all ${nMods} microinverters via PLC (count must match)`,
+                  "Apply grid profile: IEEE 1547-2018 (REQUIRED before micros produce)",
+                  `Close AC disconnect — micros begin grid sync (1–5 min per UL 1741)`,
+                  "Verify all micros producing — check Installer Toolkit for per-micro status",
+                  "Install consumption monitoring CTs if applicable (arrow toward loads)",
+                ] : isSolarEdge ? [
+                  "Close AC breaker at main panel FIRST",
+                  "Close DC disconnect — inverter powers on",
+                  `Connect to WiFi AP \"SEDG-xxxxxxxxx\" via SolarEdge SetApp`,
+                  `Pair optimizers: long-press button 10 sec → turn ON within 5 sec → wait 10–15 min`,
+                  `Verify P_OK count in SetApp = ${nMods} (must match installed optimizer count)`,
+                  "Set grid code: SetApp > Commissioning > Configuration > IEEE 1547:2018",
+                  "Configure WiFi/Ethernet: SetApp > Communication settings",
+                  "Activate on monitoring.solaredge.com portal",
+                  "Verify inverter LED: solid green = producing",
+                ] : isSMA ? [
+                  "Turn DC switch ON — inverter display activates",
+                  `Verify DC voltage on display: expected ${expVoc}V Voc`,
+                  "Open SMA 360° app → scan QR code on inverter",
+                  "Connect to inverter WiFi AP (tap lid 2× for WPS, or connect via app)",
+                  "Set country standard = USA (locks after 10 hours of feed-in!)",
+                  `Close AC breaker at main panel (${acBreaker}A, 240V)`,
+                  "Inverter begins grid sync — wait 1–5 min per UL 1741",
+                  "Register on Sunny Portal (sunnyportal.com) — need PIC + RID codes from Connection Unit",
+                  "Verify LEDs: 3 ON = startup; green flash = initializing; green solid = producing",
+                  "Set inverter installer password to match Sunny Portal password",
+                ] : isFronius ? [
+                  "Turn DC disconnect ON — inverter powers from PV",
+                  `Verify DC voltage: expected ${expVoc}V Voc`,
+                  "Open Fronius Solar.start app → scan QR code on inverter",
+                  "Connect to WiFi AP \"FroniusMeter_xxxxx\" — password: 12345678",
+                  "Open Web UI at 192.168.250.181 in browser for full configuration",
+                  "Set Country Setup per utility requirements (need access code from Fronius support)",
+                  `Close AC breaker at main panel (${acBreaker}A, 240V)`,
+                  "Inverter begins grid sync — verify green solid LED = producing",
+                  "Register on Solar.web (solarweb.com) — need V.Code from nameplate (register within 2 years!)",
+                  "Verify EXTERNAL RSD is functional (Fronius RSD Box Quattro or Duo)",
+                ] : isSolArk ? [
+                  "Step 1: Turn Battery switch ON",
+                  "Step 2: Press and hold Power button on inverter",
+                  "Step 3: Turn PV DC disconnect ON",
+                  `Step 4: Close GRID breaker at main panel (${acBreaker}A, 240V)`,
+                  "Step 5: Close LOAD and GEN breakers ON",
+                  "Open MySol-Ark app → scan QR on SA-ETH-PWR dongle (or enter serial + key)",
+                  "Verify grid settings: Settings > Grid Settings (120/240V split-phase 60Hz)",
+                  "Configure mode: Grid Sell, Limited Power, Off-Grid, or TOU as specified",
+                  "Set battery charge/discharge parameters",
+                  "Verify LEDs: green NORMAL = OK, green DC = PV, green AC = grid synced",
+                  "Verify RSD: external relay wired to sensor board pins 9&10 (or 11&12)",
+                ] : isTigo ? [
+                  "Step 1: Turn Battery BAT switch ON (if battery installed)",
+                  "Step 2: Turn inverter DC switch ON",
+                  "Step 3: Close grid service disconnect ON",
+                  "Step 4: Turn PV DC disconnect ON",
+                  "If inverter does not start: remove green button cover, hold until green leaf LED flashes rapidly",
+                  "Open Tigo Energy Intelligence app → Bluetooth auto-scan (no internet needed)",
+                  "Complete commissioning wizard — auto-selects US 120/240V 60Hz",
+                  "Verify all TS4 units detected via PLC",
+                  "Verify LED: solid green = producing; 3s ON / 1s OFF = DC online, AC offline",
+                  "Test RSD button: stops PLC signal → all TS4s drop to <0.6V within 30 seconds",
+                ] : [
+                  "Close DC disconnect — verify inverter shows DC input voltage",
+                  `Expected DC: ${expVoc}V Voc (drops to ~${expVmp}V Vmp under load)`,
+                  `Connect to inverter via ${brand} manufacturer app`,
+                  "Set grid profile per utility requirements (IEEE 1547)",
+                  `Close AC breaker at main panel (${acBreaker}A, 240V)`,
+                  "Inverter begins grid sync (1–5 min per UL 1741)",
+                  "Verify inverter status: producing / grid-tied (no fault codes)",
+                ]).map((item, i) => (
+                  <tr key={i}><td style={{ ...tcR, fontWeight: 700 }}>{i + 1}</td><td style={tcell}>{item}</td><td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td></tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* ── LED STATUS REFERENCE ── */}
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 18 }}>LED STATUS REFERENCE</div>
+            <table style={tbl}>
+              <thead><tr><th style={th}>LED / Indicator</th><th style={th}>Meaning</th></tr></thead>
+              <tbody>
+                {(isEnphase ? [
+                  ["All LEDs flash amber/red", "Gateway booting (2–3 min)"],
+                  ["Solid green", "Producing normally"],
+                  ["Flashing green", "Grid-connected, no production"],
+                  ["Blue", "Communications OK"],
+                  ["Red", "Fault — check Installer Toolkit for code"],
+                ] : isSolarEdge ? [
+                  ["Solid green", "Producing normally"],
+                  ["Flashing green", "Grid-connected, no production"],
+                  ["Blue", "Communications OK"],
+                  ["Red", "Fault — check SetApp for error code"],
+                ] : isSMA ? [
+                  ["All 3 LEDs ON", "Startup / initializing"],
+                  ["Green flashing", "Initializing / grid search"],
+                  ["Green solid", "Producing normally"],
+                  ["Red", "Fault — check SMA 360° app for code"],
+                ] : isFronius ? [
+                  ["Green solid", "Producing normally"],
+                  ["Green flashing", "Startup / connecting to grid"],
+                  ["Yellow (daytime)", "Non-critical fault / warning"],
+                  ["Red", "Critical fault — check Solar.start app"],
+                ] : isSolArk ? [
+                  ["Green NORMAL", "System OK"],
+                  ["Green DC", "PV source connected"],
+                  ["Green AC", "Grid synced"],
+                  ["Red", "Fault — check MySol-Ark app"],
+                ] : isTigo ? [
+                  ["Solid green", "Producing normally"],
+                  ["3s ON / 1s OFF flash", "DC online, AC offline"],
+                  ["Red + audible buzzer", "Arc fault detected (AFCI)"],
+                  ["Green leaf rapid flash", "Force-start mode active"],
+                ] : [
+                  ["Green solid/flashing", "Normal operation / initializing"],
+                  ["Red / fault indicator", "Error — check manufacturer app"],
+                ]).map(([led, meaning], i) => (
+                  <tr key={i}><td style={{ ...tcell, fontWeight: 600, whiteSpace: "nowrap" }}>{led}</td><td style={tcell}>{meaning}</td></tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* ── MONITORING & PORTAL SETUP ── */}
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 18 }}>MONITORING & PORTAL SETUP</div>
+            <table style={tbl}>
+              <thead><tr><th style={{ ...th, width: 30 }}>{"\u2610"}</th><th style={th}>Step</th><th style={th}>Account / Notes</th></tr></thead>
+              <tbody>
+                {[
+                  ...(isEnphase ? [
+                    "Register system on Enlighten (enlighten.enphaseenergy.com)",
+                    "Send homeowner email invitation from Enlighten portal",
+                    "Set PTO status in Installer Toolkit (required before utility allows operation)",
+                    "Install Enphase App (homeowner app) on customer phone — NOT Installer Toolkit",
+                  ] : isSolarEdge ? [
+                    "Activate system on monitoring.solaredge.com",
+                    "Add customer email to monitoring portal",
+                    "Verify per-optimizer production data visible in portal",
+                    "Install mySolarEdge app (homeowner app) on customer phone",
+                  ] : isSMA ? [
+                    "Register on Sunny Portal (sunnyportal.com) — enter PIC + RID from Connection Unit",
+                    "IMPORTANT: Portal password MUST match inverter Installer password",
+                    "Add customer email to portal",
+                    "Install SMA Energy App (homeowner app) on customer phone",
+                  ] : isFronius ? [
+                    "Register on Solar.web (solarweb.com) — enter V.Code from nameplate",
+                    "NOTE: Must register within 2 years of installation",
+                    "Add customer email to Solar.web portal",
+                    "Install Fronius Solar.web App (homeowner app) on customer phone",
+                  ] : isSolArk ? [
+                    "Verify SA-ETH-PWR dongle connected and reporting",
+                    "Register on sol-ark.com portal or via MySol-Ark app",
+                    "Add customer email for monitoring access",
+                    "Install MySol-Ark app (homeowner app) on customer phone",
+                  ] : isTigo ? [
+                    "Verify Tigo EI app shows system online",
+                    "Register system on Tigo monitoring portal",
+                    "Add customer email for monitoring access",
+                    "Install Tigo EI app (homeowner app) on customer phone",
+                  ] : [
+                    `Register on ${brand} monitoring portal`,
+                    "Add customer email for monitoring access",
+                    `Install ${brand} homeowner app on customer phone`,
+                  ]),
+                  "Verify real-time production data visible in portal/app",
+                  "Screenshot or record monitoring account credentials for customer handoff",
+                ].map((item, i) => (
+                  <tr key={i}><td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td><td style={tcell}>{item}</td><td style={tcell}></td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ──── COMM PAGE 4 — AC VERIFICATION & PERFORMANCE ──── */}
+          <div className="plan-page" style={pg}>
+            {hdr("Commissioning Packet", "AC Verification, Safety Tests & Performance")}
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6 }}>AC VOLTAGE & CURRENT MEASUREMENTS</div>
+            <table style={tbl}>
+              <thead><tr><th style={th}>Measurement</th><th style={th}>Expected</th><th style={th}>Measured</th><th style={th}>Pass</th></tr></thead>
+              <tbody>
+                {[
+                  ["L1–L2 Voltage (at inverter)", "240V {\\u00b1}5%", "", ""],
+                  ["L1–N Voltage", "120V {\\u00b1}5%", "", ""],
+                  ["L2–N Voltage", "120V {\\u00b1}5%", "", ""],
+                  ["L1–L2 Voltage (at panel)", "240V {\\u00b1}5%", "", ""],
+                  ["AC Frequency", "60.00 Hz {\\u00b1}0.5", "", ""],
+                  ["AC Current (producing)", "Varies w/ irradiance", "", ""],
+                  [`Inverter power output`, `${iv?.kw || "—"}kW rated max`, "", ""],
+                ].map(([meas, exp], i) => (
+                  <tr key={i}>
+                    <td style={tcell}>{meas}</td>
+                    <td style={tcR}>{exp}</td>
+                    <td style={tcell}></td>
+                    <td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 18 }}>RAPID SHUTDOWN TEST — NEC 690.12</div>
+            <div style={{ padding: "6px 10px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 4, fontSize: 10, color: "#991b1b", marginBottom: 8, lineHeight: 1.5 }}>
+              <strong>Required for all systems.</strong> {isMicro || isOptimizer
+                ? "MLPE (module-level power electronics) provides module-level shutdown. Verify that opening the AC disconnect or triggering the rapid shutdown initiator causes all module-level DC voltage to drop below 80V within 30 seconds."
+                : "Rapid shutdown must reduce conductors outside the array boundary to {\\u226480}V within 30 seconds of initiator activation. Verify rapid shutdown device is installed and functional."
+              }
+            </div>
+            <table style={tbl}>
+              <thead><tr><th style={{ ...th, width: 30 }}>{"\u2610"}</th><th style={th}>Test Step</th><th style={th}>Result</th></tr></thead>
+              <tbody>
+                {[
+                  "System producing normally — record current output: _______ W",
+                  isMicro || isOptimizer
+                    ? "Open AC disconnect (or activate rapid shutdown initiator)"
+                    : "Activate rapid shutdown initiator at service point",
+                  "Start timer — verify array DC voltage drops below 80V within 30 seconds",
+                  isMicro ? "Verify all microinverters stop producing (check gateway)" : isOptimizer ? "Verify all optimizers enter safe mode (1V per optimizer)" : "Verify rapid shutdown device indicator shows activated state",
+                  "Measure DC voltage at array boundary conductors — must be < 80V",
+                  "Re-energize system — verify normal operation resumes",
+                ].map((item, i) => (
+                  <tr key={i}><td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td><td style={tcell}>{item}</td><td style={tcell}></td></tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 18 }}>GROUNDING CONTINUITY</div>
+            <table style={tbl}>
+              <thead><tr><th style={{ ...th, width: 30 }}>{"\u2610"}</th><th style={th}>Test</th><th style={th}>Reading ({"\u2126"})</th></tr></thead>
+              <tbody>
+                {[
+                  "EGC continuity: array frame to inverter ground lug",
+                  "EGC continuity: inverter ground lug to panel ground bus",
+                  "GEC continuity: panel ground bus to grounding electrode",
+                  "Bonding: racking to EGC (each rail section bonded)",
+                  "Ground rod resistance (if meter available): < 25\u2126 per NEC 250.53",
+                ].map((item, i) => (
+                  <tr key={i}><td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td><td style={tcell}>{item}</td><td style={tcell}></td></tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 18 }}>LABELING VERIFICATION — NEC 690</div>
+            <table style={tbl}>
+              <thead><tr><th style={{ ...th, width: 30 }}>{"\u2610"}</th><th style={th}>Label</th><th style={th}>Location</th><th style={th}>NEC Ref</th></tr></thead>
+              <tbody>
+                {[
+                  ["PV System Disconnect", "At DC disconnect", "690.13(B)"],
+                  ["PV System Rating", "At main service panel", "690.53"],
+                  ["AC Interconnection Point", "At breaker in panel", "705.10"],
+                  ["Rapid Shutdown Placard", "At service entrance / main disconnect", "690.12(B)(3)"],
+                  ["Ground-Fault Warning", "At inverter / GFP device", "690.41(B)"],
+                  ["Conduit / Raceway Markings", "All DC conduit runs", "690.31(G)"],
+                  ["Arc-Fault Protection", "At inverter (if AFCI equipped)", "690.11"],
+                ].map(([label, loc, ref], i) => (
+                  <tr key={i}>
+                    <td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td>
+                    <td style={{ ...tcell, fontWeight: 600 }}>{label}</td>
+                    <td style={tcell}>{loc}</td>
+                    <td style={tcR}>{ref}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ──── COMM PAGE 5 — PERFORMANCE & SIGN-OFF ──── */}
+          <div className="plan-page" style={pg}>
+            {hdr("Commissioning Packet", "Performance Verification & Sign-Off")}
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6 }}>PRODUCTION VERIFICATION</div>
+            <table style={tbl}><tbody>
+              <tr><td style={th}>Array DC Rating</td><td style={tcR}>{arrayKw.toFixed(2)} kW</td><td style={th}>Inverter AC Rating</td><td style={tcR}>{iv?.kw || "—"} kW</td></tr>
+              <tr><td style={th}>Time of Test</td><td style={tcell}>_______________</td><td style={th}>Sky Conditions</td><td style={tcell}>_______________</td></tr>
+              <tr><td style={th}>Irradiance (if meter avail.)</td><td style={tcell}>_______ W/m{"\u00b2"}</td><td style={th}>Ambient Temp</td><td style={tcell}>_______ {"\u00b0"}F</td></tr>
+              <tr><td style={th}>Inverter Display Power</td><td style={tcell}>_______ kW</td><td style={th}>Inverter Display Energy (today)</td><td style={tcell}>_______ kWh</td></tr>
+              <tr><td style={th}>Panel Meter Reading (if avail.)</td><td style={tcell}>_______ kW</td><td style={th}>Est. Annual Production</td><td style={tcR}>{dsg?.kwh ? dsg.kwh.toLocaleString() + " kWh" : "—"}</td></tr>
+            </tbody></table>
+            <div style={{ padding: "6px 10px", background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 4, fontSize: 10, color: "#14532d", marginTop: 8, marginBottom: 14, lineHeight: 1.5 }}>
+              <strong>Quick check:</strong> On a clear day near solar noon, system should produce ~70–85% of DC nameplate ({(arrayKw * 0.7).toFixed(1)}–{(arrayKw * 0.85).toFixed(1)} kW).
+              Lower readings may indicate shading, soiling, high temp derating, or wiring issues. Compare string-to-string production if possible.
+            </div>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 18 }}>CUSTOMER WALKTHROUGH</div>
+            <table style={tbl}>
+              <thead><tr><th style={{ ...th, width: 30 }}>{"\u2610"}</th><th style={th}>Item</th><th style={th}>Notes</th></tr></thead>
+              <tbody>
+                {[
+                  "Showed customer how to read inverter display / status lights",
+                  "Installed monitoring app on customer phone and verified login",
+                  "Explained rapid shutdown location and operation",
+                  "Explained AC disconnect location and when to use it",
+                  "Reviewed expected production and seasonal variation",
+                  "Provided warranty documentation (module, inverter, workmanship)",
+                  "Explained net metering / utility billing changes",
+                  "Provided emergency contact information for service calls",
+                  "Reviewed system maintenance (annual visual inspection, keep panels clear)",
+                ].map((item, i) => (
+                  <tr key={i}><td style={{ ...tcell, textAlign: "center", fontSize: 14 }}>{"\u2610"}</td><td style={tcell}>{item}</td><td style={tcell}></td></tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000", marginBottom: 6, marginTop: 18 }}>FINAL SIGN-OFF</div>
+            <table style={tbl}><tbody>
+              <tr>
+                <td style={{ ...th, width: "50%" }}>Commissioning Technician</td>
+                <td style={{ ...th, width: "50%" }}>Customer / Property Owner</td>
+              </tr>
+              <tr>
+                <td style={{ ...tcell, height: 50 }}>
+                  <div style={{ fontSize: 10, color: "#999" }}>Name: ________________________________</div>
+                  <div style={{ fontSize: 10, color: "#999", marginTop: 8 }}>Signature: _____________________________</div>
+                </td>
+                <td style={{ ...tcell, height: 50 }}>
+                  <div style={{ fontSize: 10, color: "#999" }}>Name: ________________________________</div>
+                  <div style={{ fontSize: 10, color: "#999", marginTop: 8 }}>Signature: _____________________________</div>
+                </td>
+              </tr>
+              <tr>
+                <td style={tcell}><span style={{ fontSize: 10, color: "#999" }}>Date: _______________</span></td>
+                <td style={tcell}><span style={{ fontSize: 10, color: "#999" }}>Date: _______________</span></td>
+              </tr>
+            </tbody></table>
+
+            <div style={{ marginTop: 14, padding: "8px 12px", background: "#f9f9f9", border: "1px solid #ddd", borderRadius: 4, fontSize: 10, color: "#555", lineHeight: 1.6 }}>
+              <strong>Record Retention:</strong> This commissioning packet should be kept on file for the duration of the system warranty.
+              A copy should be provided to the customer and the AHJ (if required). Photos of all test measurements are recommended.
+              <br /><br />
+              <strong>System:</strong> {nMods}x {md?.nm} ({md?.w}W) + {nInv}x {iv?.nm} ({iv?.kw}kW) = {arrayKw.toFixed(2)} kW DC | {pj.mt} mount | {pj.es || 200}A service
+            </div>
+          </div>
+
         </div>
       )}
     </div>
