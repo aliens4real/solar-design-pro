@@ -83,7 +83,7 @@ export default function PermittingTab({ pj, pm, uPm, geo, md, iv, sz, dsg, pk, r
     if (!geo) { setJurMsg("Geocode address on Project tab first"); return; }
     setJurBusy(true); setJurMsg("Looking up jurisdictions...");
     try {
-      const r = await lookupJurisdiction(geo.lat, geo.lng);
+      const r = await lookupJurisdiction(geo.lat, geo.lng, pj.ct);
       uPm("jur", r);
       setJurMsg(r.st ? "Jurisdiction found" : "Partial results — some levels unavailable");
     } catch (e) { setJurMsg("Error: " + e.message); }

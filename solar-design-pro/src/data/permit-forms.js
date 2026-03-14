@@ -51,6 +51,11 @@ export const PERMIT_FORMS = [
   { st: "OH", co: "Mahoning", pl: "Boardman", cat: "zoning", nm: "Boardman Twp Zoning (w/ Site Plan Review)", url: "https://www.boardmantwp.com/zoning/files/2025/03/Zoning-Compliance-needing-site-plan-review-fillable-PDF.pdf", dept: "Boardman Twp Planning & Zoning", ph: "(330) 726-4177" },
 
   // ═══════════════════════════════════════════
+  // POLAND VILLAGE — Zoning
+  // ═══════════════════════════════════════════
+  { st: "OH", co: "Mahoning", pl: "Poland", cat: "zoning", nm: "Poland Village Zoning Permit", url: "https://polandvillage.org/home/departments", dept: "Poland Village Zoning — Donald Lambert", ph: "(330) 757-2112" },
+
+  // ═══════════════════════════════════════════
   // CITY OF WARREN — Building
   // ═══════════════════════════════════════════
   { st: "OH", co: "Trumbull", pl: "Warren", cat: "building", nm: "City of Warren Building Permit Application", url: "https://www.cityofwarren.org/wp-content/uploads/2019/08/Building_Building_Permit-Plan_Review_Application.pdf", dept: "Warren Engineering, Planning & Building", ph: "(330) 841-2562" },
@@ -103,6 +108,29 @@ export const PERMIT_FORMS = [
   { st: "PA", co: "Lawrence", pl: null, cat: "reference", nm: "Lawrence County Planning & Development", url: "https://www.lawrencecountypa.gov/departments/planning-community-development", dept: "Lawrence County Planning", ph: "(724) 656-2144" },
   { st: "PA", co: "Mercer", pl: null, cat: "reference", nm: "Mercer County Regional Planning Commission", url: "https://www.mcrpc.com/", dept: "MCRPC", ph: "(724) 981-2412" },
   { st: "PA", co: "Beaver", pl: null, cat: "reference", nm: "Beaver County Planning & Redevelopment", url: "https://www.beavercountypa.gov/departments/planning-commission", dept: "Beaver County Planning Commission", ph: "(724) 770-4421" },
+];
+
+// ── Place Overrides — villages/cities with own permit authority ──
+// Used by jurisdiction.js to cross-check city name when Census API misses incorporated place
+export const PLACE_OVERRIDES = [
+  // Mahoning County
+  { st: "OH", co: "Mahoning", names: ["Poland"], fips: "3964192" },
+  { st: "OH", co: "Mahoning", names: ["Boardman"], fips: "3907678" },
+  { st: "OH", co: "Mahoning", names: ["Youngstown"], fips: "3986548" },
+  { st: "OH", co: "Mahoning", names: ["Campbell"], fips: "3911922" },
+  { st: "OH", co: "Mahoning", names: ["Struthers"], fips: "3975098" },
+  { st: "OH", co: "Mahoning", names: ["Canfield"], fips: "3912476" },
+  { st: "OH", co: "Mahoning", names: ["Lowellville"], fips: "3945304" },
+  { st: "OH", co: "Mahoning", names: ["New Middletown"], fips: "3953704" },
+  // Trumbull County
+  { st: "OH", co: "Trumbull", names: ["Warren"], fips: "3980892" },
+  { st: "OH", co: "Trumbull", names: ["Niles"], fips: "3955860" },
+  { st: "OH", co: "Trumbull", names: ["Girard"], fips: "3929694" },
+  { st: "OH", co: "Trumbull", names: ["Howland"], fips: "3936554" },
+  // Columbiana County
+  { st: "OH", co: "Columbiana", names: ["Salem"], fips: "3969652" },
+  { st: "OH", co: "Columbiana", names: ["East Liverpool"], fips: "3923380" },
+  { st: "OH", co: "Columbiana", names: ["Lisbon"], fips: "3943890" },
 ];
 
 // ── Utility Interconnection Forms ──

@@ -1,6 +1,8 @@
 // ── Jurisdiction Lookup (FCC + Census Bureau) ──
 
-export async function lookupJurisdiction(lat, lng) {
+import { PLACE_OVERRIDES } from '../data/permit-forms.js';
+
+export async function lookupJurisdiction(lat, lng, cityHint) {
   const jur = { st: null, co: null, tw: null, pl: null };
 
   // 1) FCC Census Block API → state + county
@@ -46,6 +48,19 @@ export async function lookupJurisdiction(lat, lng) {
       }
     }
   } catch {}
+
+  // 3) Cross-check city hint against override table when Census missed the place
+  if (!jur.pl && cityHint && jur.st?.cd) {
+    const hint = cityHint.toLowerCase();
+    const match = PLACE_OVERRIDES.find(o =>
+      o.st === jur.st.cd &&
+      (!o.co || (jur.co?.nm && jur.co.nm.toLowerCase().includes(o.co.toLowerCase()))) &&
+      o.names.some(n => n.toLowerCase() === hint)
+    );
+    if (match) {
+      jur.pl = { fips: match.fips, nm: match.names[0] };
+    }
+  }
 
   return jur;
 }
