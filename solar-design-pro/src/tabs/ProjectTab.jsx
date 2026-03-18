@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { MODS } from '../data/modules.js';
 import { INVS } from '../data/inverters.js';
 import { callClaude } from '../api/anthropic.js';
@@ -227,26 +227,20 @@ Then under **Recommendations**, explain which fields in our solar design tool th
               </div>
               <div>
                 <label style={lb}>Orientation</label>
-                <select style={inp} value={g.ori || "portrait"} onChange={e => updGroup(g.id, "ori", e.target.value)}>
-                  <option value="portrait">Portrait</option>
-                  <option value="landscape">Landscape</option>
+                <select style={inp} value={g.ori || "P"} onChange={e => updGroup(g.id, "ori", e.target.value)}>
+                  <option value="P">Portrait</option>
+                  <option value="L">Landscape</option>
                 </select>
               </div>
               <div>
                 <label style={lb}>Pitch °</label>
-                <select style={inp} value={g.pitch || pj.rp || "22"} onChange={e => updGroup(g.id, "pitch", e.target.value)}>
+                <select style={inp} value={g.rp || pj.rp || "22"} onChange={e => updGroup(g.id, "rp", e.target.value)}>
                   {pitchOpts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-                <div>
-                  <label style={lb}>Width</label>
-                  <input style={inp} type="number" min="1" value={g.cols || 1} onChange={e => updGroup(g.id, "cols", +e.target.value)} />
-                </div>
-                <div>
-                  <label style={lb}>Depth</label>
-                  <input style={inp} type="number" min="1" value={g.rows || 1} onChange={e => updGroup(g.id, "rows", +e.target.value)} />
-                </div>
+              <div>
+                <label style={lb}>Face Width ft</label>
+                <input style={inp} type="number" min="1" value={g.fw || 30} onChange={e => updGroup(g.id, "fw", e.target.value)} />
               </div>
             </div>
           </div>
@@ -277,7 +271,7 @@ Then under **Recommendations**, explain which fields in our solar design tool th
             </div>
             <div>
               <label style={lb}>PSH hrs</label>
-              <input style={inp} type="number" step="0.1" value={pj.psh || ""} onChange={e => u("psh", +e.target.value)} />
+              <input style={inp} type="number" step="0.1" value={pj.ps || ""} onChange={e => u("ps", +e.target.value)} />
             </div>
           </div>
         ) : <div style={{ fontSize: 12, fontFamily: ff, color: td }}>No climate data yet — enter address and city above</div>}
@@ -320,7 +314,7 @@ Then under **Recommendations**, explain which fields in our solar design tool th
               </div>
             ))}
           </div>
-          {pj.kw > 0 && (() => {
+          {+pj.kw > 0 && (() => {
             const target = +pj.kw;
             const needed = Math.ceil((target * 1000) / md.w);
             const actualKw = (totalMods * md.w) / 1000;

@@ -43,7 +43,7 @@ const JOBS_KEY = "sdp_jobs";
 const ACTIVE_KEY = "sdp_active_job";
 const jobKey = (id) => `sdp_job_${id}`;
 
-const DEF_PJ = { nm: "", ad: "", ct: "", st: "", zp: "", kw: "", mt: "roof", rf: "asphalt", rp: "", es: "200", ds: "", eq: "", nt: "", tl: "", th: "", ir: "", ps: "", mi: "", ii: "" };
+const DEF_PJ = { nm: "", ad: "", ct: "", st: "", zp: "", kw: "", mt: "roof", rf: "comp", rp: "", es: "200", ds: "", ds2: "", eq: "", nt: "", tl: "", th: "", ir: "", ps: "", mi: "", ii: "" };
 const DEF_GROUPS = [{ id: 1, nm: "South Face", az: "180", ori: "L", cnt: "", rp: "", fw: "30", fd: "18" }];
 const DEF_WR = { pv: 0, dc: 0, ac: 0, se: 0, gec: 0 };
 const DEF_PHT = [
@@ -103,7 +103,7 @@ export default function App() {
 
   // ── Core State ──
   const [tab, setTab] = useState("project");
-  const [pj, sPj] = useState(saved.current?.pj || { nm: "", ad: "", ct: "", st: "", zp: "", kw: "", mt: "roof", rf: "asphalt", rp: "", es: "200", ds: "", eq: "", nt: "", tl: "", th: "", ir: "", ps: "", mi: "", ii: "" });
+  const [pj, sPj] = useState(saved.current?.pj || { nm: "", ad: "", ct: "", st: "", zp: "", kw: "", mt: "roof", rf: "comp", rp: "", es: "200", ds: "", eq: "", nt: "", tl: "", th: "", ir: "", ps: "", mi: "", ii: "" });
   const [geo, setGeo] = useState(saved.current?.geo || null);
   const climRan = useRef(false);
   const u = (k, v) => sPj(p => ({ ...p, [k]: v }));
@@ -147,7 +147,7 @@ export default function App() {
     if (ivList.length > 0 && ivList[0].model && ivList[0].model !== pj.ii) {
       u("ii", ivList[0].model);
     }
-  }, [ivList]);
+  }, [ivList, pj.ii]);
 
   // ── Module Groups ──
   const [roofType, setRoofType] = useState(saved.current?.roofType || "gable");
@@ -305,7 +305,7 @@ export default function App() {
     });
   };
 
-  const removeSelMod = () => {
+  const removeSelMod = useCallback(() => {
     if (!laySel) return;
     const { gid, idx } = laySel;
     const g = modGroups.find(x => x.id === gid);
@@ -318,7 +318,7 @@ export default function App() {
       return { ...prev, [gid]: arr };
     });
     setLaySel(null);
-  };
+  }, [laySel, modGroups]);
 
   const autoFillFace = (gid) => {
     const g = modGroups.find(x => x.id === gid);
@@ -383,9 +383,10 @@ export default function App() {
       sWr(data.wr || { ...DEF_WR });
       sDsg(data.dsg || null);
       sPm(data.pm || { ...DEF_PM });
-      sPk([]); sDan({ mk: [], ln: [] }); sMs([]); sMkr([]);
-      sPht(DEF_PHT.map(p => ({ ...p, mk: [], ln: [] })));
-      setLayPos({}); setLaySel(null); setInvRec("");
+      sPk([]); sMs([]); sMkr([]);
+      sDan(data.dAn || { mk: [], ln: [] });
+      sPht(data.pht || DEF_PHT.map(p => ({ ...p, mk: [], ln: [] })));
+      setLayPos(data.layPos || {}); setLaySel(null); setInvRec("");
       setActiveJobId(id);
       localStorage.setItem(ACTIVE_KEY, id);
       climRan.current = false;
@@ -423,7 +424,7 @@ export default function App() {
 
   // ── String sizing ──
   const cr = useRef(null);
-  const sz = strCalc(md, iv, pj.tl, pj.th, pj.mt);
+  const sz = strCalc(md, iv, pj.tl, pj.th, pj.mt, pj.es);
 
   // ── String map (which string each module belongs to) ──
   const strMap = useMemo(() => {
@@ -457,7 +458,7 @@ export default function App() {
   useEffect(() => {
     const t = setTimeout(() => {
       try {
-        const data = JSON.stringify({ pj, ivList, modGroups, roofType, geo, wr, dsg, pm });
+        const data = JSON.stringify({ pj, ivList, modGroups, roofType, geo, wr, dsg, pm, pht, layPos, dAn });
         localStorage.setItem(SAVE_KEY, data);
         if (activeJobId) {
           localStorage.setItem(jobKey(activeJobId), data);
@@ -472,7 +473,7 @@ export default function App() {
       } catch {}
     }, 500);
     return () => clearTimeout(t);
-  }, [pj, ivList, modGroups, roofType, geo, wr, dsg, pm, activeJobId]);
+  }, [pj, ivList, modGroups, roofType, geo, wr, dsg, pm, pht, layPos, dAn, activeJobId]);
 
   // ── Effects ──
   useEffect(() => { if (dsg && md && iv) { sPk(mkPack(md, iv, dsg, sz, wr, pj.es, pht, ivs, rack)); } }, [dsg, md, iv, sz, wr, pj.es, pht, ivs, rack]);
@@ -480,12 +481,12 @@ export default function App() {
   useEffect(() => {
     const h = e => { if ((e.key === "Delete" || e.key === "Backspace") && laySel && tab === "layout") { e.preventDefault(); removeSelMod(); } };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
-  }, [laySel, tab]);
+  }, [laySel, tab, removeSelMod]);
 
   // ── Auto-recommend inverter when module + kW are set ──
   useEffect(() => {
-    if (md && pj.kw > 0 && totalKw > 0 && !iv) recommendInverter();
-  }, [pj.mi, pj.kw, totalMods]);
+    if (md && +pj.kw > 0 && totalKw > 0 && !iv) recommendInverter();
+  }, [pj.mi, pj.kw, totalMods, md, iv, totalKw]);
 
   // ── Climate Lookup ──
   lookupClimateRef.current = async (pjSnap) => {

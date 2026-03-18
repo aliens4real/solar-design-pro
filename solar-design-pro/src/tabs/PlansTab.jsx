@@ -26,12 +26,12 @@ export default function PlansTab({ md, iv, sz, pj, dsg, pk, totalMods, totalKw, 
   const modsPerStr = dsg?.ms || (sz?.opt) || 0;
   const nInv = dsg?.ni || 1;
   const arrayKw = (nMods * md?.w / 1000) || 0;
-  const dcac = iv ? (arrayKw / iv.kw).toFixed(2) : "\u2014";
+  const dcac = totalIvKw > 0 ? (arrayKw / totalIvKw).toFixed(2) : iv ? (arrayKw / iv.kw).toFixed(2) : "\u2014";
   const needsCombiner = nStr > iv?.mppt;
   const busbar = +pj.es || 200;
   const rule120 = busbar * 1.2;
   const acBreaker = iv?.oc || 40;
-  const pass120 = acBreaker + (busbar <= rule120);
+  const pass120 = (acBreaker + busbar) <= rule120;
   const sysVoc = sz ? (sz.vc * modsPerStr).toFixed(1) : "\u2014";
   const sysVmp = sz ? (sz.vh * modsPerStr).toFixed(1) : "\u2014";
 
@@ -302,13 +302,13 @@ Phases should be: 1-Site Prep, 2-Material Staging, 3-Roof Prep/Layout, 4-Racking
                   <thead><tr>
                     <th style={th}>Group</th><th style={th}>Qty</th><th style={th}>Azimuth</th><th style={th}>Orientation</th><th style={{ ...th, textAlign: "right" }}>kW</th>
                   </tr></thead>
-                  <tbody>{modGroups.filter(g => g.count > 0).map((g, i) => (
+                  <tbody>{modGroups.filter(g => (+g.cnt || 0) > 0).map((g, i) => (
                     <tr key={i}>
-                      <td style={tcell}>{g.name || `Group ${i + 1}`}</td>
-                      <td style={tcR}>{g.count}</td>
-                      <td style={tcR}>{g.azimuth || 180}\u00b0</td>
-                      <td style={tcell}>{g.orientation || "Portrait"}</td>
-                      <td style={tcR}>{((g.count * md.w) / 1000).toFixed(2)}</td>
+                      <td style={tcell}>{g.nm || `Group ${i + 1}`}</td>
+                      <td style={tcR}>{g.cnt}</td>
+                      <td style={tcR}>{g.az || 180}\u00b0</td>
+                      <td style={tcell}>{g.ori === "L" ? "Landscape" : "Portrait"}</td>
+                      <td style={tcR}>{((+g.cnt * md.w) / 1000).toFixed(2)}</td>
                     </tr>
                   ))}</tbody>
                 </table>
@@ -330,12 +330,14 @@ Phases should be: 1-Site Prep, 2-Material Staging, 3-Roof Prep/Layout, 4-Racking
           <div className="plan-page" style={pg}>
             {hdr("Array Layout", "Module Placement \u2014 Roof / Ground Layout Diagram")}
 
-            {modGroups && modGroups.filter(g => g.count > 0).map((g, gi) => {
-              const mW = modSz?.w || 1050;
-              const mH = modSz?.h || 2100;
-              const fW = faceSz?.w || 8000;
-              const fH = faceSz?.h || 5000;
-              const positions = layPos?.[gi] || [];
+            {modGroups && modGroups.filter(g => (+g.cnt || 0) > 0).map((g, gi) => {
+              const msz = modSz(g.ori);
+              const mW = msz?.w || 1050;
+              const mH = msz?.h || 2100;
+              const fsz = faceSz(g.ori, g.fw);
+              const fW = fsz?.w || 8000;
+              const fH = fsz?.h || 5000;
+              const positions = layPos?.[g.id] || [];
               const printScale = Math.min(750 / (fW / 25.4 * 3), 400 / (fH / 25.4 * 3));
               const svgW = (fW / 25.4) * printScale * 3;
               const svgH = (fH / 25.4) * printScale * 3;
@@ -345,7 +347,7 @@ Phases should be: 1-Site Prep, 2-Material Staging, 3-Roof Prep/Layout, 4-Racking
               return (
                 <div key={gi} style={{ marginBottom: 24 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#000", marginBottom: 6 }}>
-                    {g.name || `Group ${gi + 1}`} \u2014 {g.count} modules, {g.azimuth || 180}\u00b0 azimuth, {g.orientation || "Portrait"}
+                    {g.nm || `Group ${gi + 1}`} \u2014 {g.cnt} modules, {g.az || 180}\u00b0 azimuth, {g.ori === "L" ? "Landscape" : "Portrait"}
                   </div>
                   <svg width={Math.max(svgW, 300)} height={Math.max(svgH, 200)} style={{ border: "1px solid #ccc", background: "#fafafa", borderRadius: 4 }}>
                     {/* Roof / face outline */}
@@ -354,8 +356,8 @@ Phases should be: 1-Site Prep, 2-Material Staging, 3-Roof Prep/Layout, 4-Racking
                     {positions.length > 0 ? positions.map((pos, mi) => {
                       const px = (pos.x || 0) * printScale;
                       const py = (pos.y || 0) * printScale;
-                      const pw = ((g.orientation === "Landscape" ? mHin : mWin)) * printScale;
-                      const ph = ((g.orientation === "Landscape" ? mWin : mHin)) * printScale;
+                      const pw = ((g.ori === "L" ? mHin : mWin)) * printScale;
+                      const ph = ((g.ori === "L" ? mWin : mHin)) * printScale;
                       return (
                         <g key={mi}>
                           <rect x={px + 10} y={py + 10} width={pw} height={ph} fill="#2563eb22" stroke="#2563eb" strokeWidth={0.8} rx={1} />
@@ -364,12 +366,12 @@ Phases should be: 1-Site Prep, 2-Material Staging, 3-Roof Prep/Layout, 4-Racking
                       );
                     }) : (
                       /* Fallback grid when no positions available */
-                      Array.from({ length: g.count }, (_, mi) => {
-                        const cols = Math.ceil(Math.sqrt(g.count * 1.5));
+                      Array.from({ length: +g.cnt || 0 }, (_, mi) => {
+                        const cols = Math.ceil(Math.sqrt((+g.cnt || 0) * 1.5));
                         const r = Math.floor(mi / cols);
                         const cc = mi % cols;
-                        const cellW = (g.orientation === "Landscape" ? mHin : mWin) * printScale;
-                        const cellH = (g.orientation === "Landscape" ? mWin : mHin) * printScale;
+                        const cellW = (g.ori === "L" ? mHin : mWin) * printScale;
+                        const cellH = (g.ori === "L" ? mWin : mHin) * printScale;
                         const gap = 2;
                         return (
                           <g key={mi}>
@@ -388,7 +390,7 @@ Phases should be: 1-Site Prep, 2-Material Staging, 3-Roof Prep/Layout, 4-Racking
               );
             })}
 
-            {(!modGroups || modGroups.filter(g => g.count > 0).length === 0) && (
+            {(!modGroups || modGroups.filter(g => (+g.cnt || 0) > 0).length === 0) && (
               <div style={{ textAlign: "center", padding: 40, color: "#999", fontSize: 12 }}>No module groups configured. Add groups on the Layout tab.</div>
             )}
           </div>
