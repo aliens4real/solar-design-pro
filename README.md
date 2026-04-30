@@ -1,8 +1,8 @@
 # Solar Design Pro
 
-A NABCEP-compliant PV system design platform built for **Canopy Solar** — a small residential and commercial solar installer in Ohio and Pennsylvania. Replaces a 3+ hour manual workflow (measurements → spreadsheets → hand-drawn layouts → manual NEC lookups) with a single React app that runs the full design end-to-end: roof layout, NEC-compliant electrical calcs, IronRidge racking BOM, and permit-ready plan-set PDFs.
+A NABCEP-compliant PV system design platform built for **Canopy Solar** — a small residential and commercial solar installer in Ohio and Pennsylvania. Replaces a 8+ hour manual workflow (measurements → spreadsheets → hand-drawn layouts → manual NEC lookups) with a single React app that runs the full design end-to-end: roof layout, NEC-compliant electrical calcs, IronRidge racking BOM, and permit-ready plan-set PDFs.
 
-Built in **4 weeks** with AI-assisted development, replacing a **$150,000+ / 6–9 month** dev-shop quote.
+Built in **4 weeks** with AI-assisted development.
 
 ---
 
@@ -13,11 +13,8 @@ Built in **4 weeks** with AI-assisted development, replacing a **$150,000+ / 6�
 | Design time | 3+ hours | 20 minutes | **−85%** |
 | Inspection error rate | ~15% | <2% | **−87%** |
 | Designs per day | 1–2 | 6–8 | **4× throughput** |
-| Annual SaaS cost | $3–5K | $0 (owned) | **$3–5K saved** |
-| Material waste | ~8% over-ordering | <2% | **$200–500 / project** |
 | Who can design | Owner only | Any trained crew | **Bottleneck removed** |
 
-**Total measurable annual value: $141,750+** (time + error reduction + material savings + license elimination), with another **~$208K/yr** in capacity unlock from removing the single-person bottleneck.
 
 ---
 
