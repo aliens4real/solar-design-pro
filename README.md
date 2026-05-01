@@ -97,7 +97,7 @@ Design notes (full detail in `CLAUDE.md`):
 
 ## What this proves
 
-This was a small-business operations problem that the market priced at $150K and 9 months. Built it in 4 weeks for a fraction of the cost, with the operator (the actual domain expert) driving the design decisions. The pattern generalizes — scheduling, estimating, inventory, quoting, dispatch — anywhere a small operator is bottlenecked by tools that don't fit.
+This was a small-business operations solution built it in 4 weeks, with the operator (the actual domain expert) driving the design decisions. The pattern generalizes — scheduling, estimating, inventory, quoting, dispatch — anywhere a small operator is bottlenecked by tools that don't fit.
 
 ---
 
